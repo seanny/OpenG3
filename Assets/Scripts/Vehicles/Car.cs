@@ -7,7 +7,7 @@ using IdeCar = RenderWareIo.Structs.Ide.Car;
 
 namespace GTA3Unity.Vehicles
 {
-    public class Car : Vehicle
+    public partial class Car : Vehicle
     {
         private static readonly Quaternion s_WheelColliderRotationCorrection =
             Quaternion.Euler(0.0f, 180.0f, 0.0f);
@@ -20,7 +20,6 @@ namespace GTA3Unity.Vehicles
         private const float MaxSuspensionDamper = 5_000.0f;
         private const float MinimumSuspensionTravel = 0.05f;
         private const float WheelMass = 20.0f;
-        private const float HandbrakeTorque = 20_000.0f;
 
         private static readonly string[] s_WheelFrameNames =
         {
@@ -35,24 +34,31 @@ namespace GTA3Unity.Vehicles
         private readonly Quaternion[] m_WheelVisualRotationOffsets = new Quaternion[WheelCount];
 
         private float m_WheelRadius;
-        private float m_MotorTorque;
-        private float m_FrontBrakeTorque;
-        private float m_RearBrakeTorque;
         private LayerMask m_LayerMaskVehicleBody;
         private int m_VehicleBodyLayer = -1;
         private int m_VehicleWheelLayer = -1;
         private bool m_IsInitialized;
+        [SerializeField] private CarAcceleration m_CarAcceleration;
 
         public override void SetModel(int modelIndex)
         {
             base.SetModel(modelIndex);
         }
 
-        void Awake()
+        private void Awake()
         {
             m_LayerMaskVehicleBody = LayerMask.GetMask("VehicleBody", "VehicleWheel");
             m_VehicleBodyLayer = LayerMask.NameToLayer("VehicleBody");
             m_VehicleWheelLayer = LayerMask.NameToLayer("VehicleWheel");
+
+            if (m_CarAcceleration == null)
+            {
+                m_CarAcceleration = GetComponent<CarAcceleration>();
+                if (m_CarAcceleration == null)
+                {
+                    m_CarAcceleration = gameObject.AddComponent<CarAcceleration>();
+                }
+            }
         }
 
         protected override void Start()
@@ -75,7 +81,7 @@ namespace GTA3Unity.Vehicles
                 return;
             }
 
-            HandleMotor(input);
+            m_CarAcceleration?.OnInput(input);
             HandleSteeringInput(input);
         }
 
@@ -126,12 +132,6 @@ namespace GTA3Unity.Vehicles
 
         private void UpdateSteering()
         {
-            Debug.Log(
-                $"Target={m_TargetSteeringInput:R}, " +
-                $"Current={m_SteeringInput:R}, " +
-                $"Angle={m_SteeringAngle:R}, " +
-                $"Lock={m_HandlingData.SteeringLock:R}");
-
             const float SteeringResponsePerFrame = 0.2f;
             const float OriginalFrameRate = 50.0f;
 
@@ -171,29 +171,6 @@ namespace GTA3Unity.Vehicles
                 }
 
                 frontWheel.steerAngle = m_SteeringAngle;
-                Debug.Log(
-                    $"Wheel {i}: assigned={m_SteeringAngle:R}, " +
-                    $"actual={frontWheel.steerAngle:R}");
-            }
-        }
-
-        private void HandleMotor(StarterAssetsInputs input)
-        {
-            for (int i = 0; i < WheelCount; i++)
-            {
-                WheelCollider wheel = m_Wheels[i];
-                if (wheel == null)
-                {
-                    continue;
-                }
-
-                bool isRearWheel = i >= FrontWheelCount;
-                wheel.motorTorque = IsDrivenWheel(i)
-                    ? input.move.y * m_MotorTorque
-                    : 0.0f;
-                wheel.brakeTorque = input.handBrake
-                    ? (isRearWheel ? Mathf.Max(m_RearBrakeTorque, HandbrakeTorque) : m_FrontBrakeTorque)
-                    : 0.0f;
             }
         }
 
@@ -298,6 +275,7 @@ namespace GTA3Unity.Vehicles
 
             ConfigureRigidbody();
             CreateWheels(ideCar, wheelFrames);
+            m_CarAcceleration.Initialize(m_Wheels, m_WheelRadius, HandlingData);
             LoadVehicleDummy();
             m_IsInitialized = true;
         }
@@ -342,29 +320,6 @@ namespace GTA3Unity.Vehicles
             float rearSuspensionShare = 1.0f - frontSuspensionShare;
             float frontGripBias = Mathf.Max(0.01f, 2.0f * HandlingData.TractionBias);
             float rearGripBias = Mathf.Max(0.01f, 2.0f - frontGripBias);
-
-            int drivenWheelCount = 0;
-            for (int i = 0; i < WheelCount; i++)
-            {
-                if (IsDrivenWheel(i))
-                {
-                    drivenWheelCount++;
-                }
-            }
-
-            float engineForce = Mathf.Max(0.0f, m_HandlingData.TransmissionData.EngineAcceleration) *
-                Mathf.Max(1.0f, m_HandlingData.Mass);
-            m_MotorTorque = drivenWheelCount > 0
-                ? engineForce * m_WheelRadius / drivenWheelCount
-                : 0.0f;
-
-            float totalBrakeTorque = Mathf.Max(0.0f, m_HandlingData.Mass) *
-                Mathf.Max(0.0f, m_HandlingData.BrakeDeceleration) *
-                m_WheelRadius;
-            m_FrontBrakeTorque = totalBrakeTorque *
-                Mathf.Max(0.0f, 2.0f * m_HandlingData.BrakeBias) * 0.25f;
-            m_RearBrakeTorque = totalBrakeTorque *
-                Mathf.Max(0.0f, 2.0f * (1.0f - m_HandlingData.BrakeBias)) * 0.25f;
 
             for (int i = 0; i < WheelCount; i++)
             {
@@ -503,16 +458,6 @@ namespace GTA3Unity.Vehicles
 
             m_WheelVisuals[wheelIndex] = wheelVisual.transform;
             m_WheelVisualRotationOffsets[wheelIndex] = visualRotation;
-        }
-
-        private bool IsDrivenWheel(int wheelIndex)
-        {
-            bool isFrontWheel = wheelIndex < FrontWheelCount;
-            EDriveType driveType = HandlingData.TransmissionData.DriveType;
-
-            return driveType == EDriveType.BothWheel ||
-                (isFrontWheel && driveType == EDriveType.FrontWheel) ||
-                (!isFrontWheel && driveType == EDriveType.BackWheel);
         }
 
         private void DisableVehicle(string reason)
