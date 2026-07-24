@@ -575,8 +575,9 @@ namespace GTA3Unity.Vehicles
             float driveSign)
         {
             bool hasGroundHit = wheel.GetGroundHit(out WheelHit hit);
-            float wheelForwardAlignment =
-                Vector3.Dot(wheel.transform.forward, vehicleForward);
+            Vector3 wheelRollingDirection = GetWheelRollingDirection(wheel);
+            float wheelRollingAlignment =
+                Vector3.Dot(wheelRollingDirection, vehicleForward);
 
             string contactDetails = hasGroundHit
                 ? $"contactPoint={hit.point.ToString("R")}, " +
@@ -595,7 +596,8 @@ namespace GTA3Unity.Vehicles
                 $"brakeTorque={wheel.brakeTorque:R}, steerAngle={wheel.steerAngle:R}, " +
                 $"driveSign={driveSign:R}, " +
                 $"wheelForward={wheel.transform.forward.ToString("R")}, " +
-                $"wheelForwardAlignment={wheelForwardAlignment:R}, " +
+                $"wheelRollingDirection={wheelRollingDirection.ToString("R")}, " +
+                $"wheelRollingAlignment={wheelRollingAlignment:R}, " +
                 $"radius={wheel.radius:R}, sprungMass={wheel.sprungMass:R}, " +
                 $"suspensionDistance={wheel.suspensionDistance:R}, " +
                 contactDetails,
@@ -652,9 +654,6 @@ namespace GTA3Unity.Vehicles
                 return 1.0f;
             }
 
-            // This matches re3's integer-division behavior in
-            // cTransmission::CalculateDriveAcceleration: lower forward gears
-            // use a four-times target-speed multiplier, while top gear uses 1.
             return LowerGearSpeedMultiplier;
         }
 
@@ -735,24 +734,35 @@ namespace GTA3Unity.Vehicles
             WheelCollider wheel,
             Vector3 vehicleForward)
         {
-            return Vector3.Dot(wheel.transform.forward, vehicleForward) < 0.0f
+            // WheelCollider's positive motor torque drives the contact patch
+            // opposite to the collider transform's forward axis. The logs
+            // confirm that hit.forwardDir is -wheel.transform.forward for
+            // these imported wheel frames. Compare the actual rolling
+            // direction so the motor torque sign matches vehicleForward.
+            Vector3 wheelRollingDirection = GetWheelRollingDirection(wheel);
+            return Vector3.Dot(wheelRollingDirection, vehicleForward) < 0.0f
                 ? -1.0f
                 : 1.0f;
         }
 
+        private static Vector3 GetWheelRollingDirection(WheelCollider wheel)
+        {
+            return -wheel.transform.forward;
+        }
+
         private Vector3 GetVehicleForward()
         {
-            // The imported DFF model has its own basis rotation, so the car
-            // root's -transform.forward is not guaranteed to be the wheel
-            // rolling direction. Rear mounts are not affected by steering and
-            // already contain the wheel-frame basis correction.
+            // WheelCollider contact forward is opposite to the collider
+            // transform's forward axis for the imported DFF wheel frames.
+            // Use the actual rolling direction so the input convention,
+            // linear velocity and motor torque all share the same forward.
             Vector3 forward = Vector3.zero;
 
             for (int i = 2; i < m_Wheels.Length; i++)
             {
                 if (m_Wheels[i] != null)
                 {
-                    forward += m_Wheels[i].transform.forward;
+                    forward += GetWheelRollingDirection(m_Wheels[i]);
                 }
             }
 
@@ -761,7 +771,7 @@ namespace GTA3Unity.Vehicles
                 return forward.normalized;
             }
 
-            return -transform.forward;
+            return transform.forward;
         }
     }
 }
