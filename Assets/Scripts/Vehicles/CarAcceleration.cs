@@ -13,13 +13,17 @@ namespace GTA3Unity.Vehicles
         private const float StopSpeed = 0.1f;
         private const float InputDeadZone = 0.001f;
         private const float HandbrakeTorque = 20_000.0f;
-        private const float LowerGearAccelerationMultiplier = 4.0f;
+        private const float LowerGearSpeedMultiplier = 4.0f;
+        private const float CoastingBrakeFraction = 0.1f;
+        private const float MinimumCoastingDeceleration = 0.5f;
 
         [Header("GTA Acceleration State")]
         [SerializeField] private Vector3 m_MovementSpeed;
         [SerializeField] private float m_fGasPedal;
         [SerializeField] private float m_fBrakePedal;
         [SerializeField] private int m_CurrentGear = 1;
+
+        [SerializeField] private bool m_UseAngularVelocity;
 
         private Rigidbody m_RigidBody;
         private WheelCollider[] m_Wheels = new WheelCollider[0];
@@ -113,7 +117,14 @@ namespace GTA3Unity.Vehicles
                 return;
             }
 
-            m_MovementSpeed = m_RigidBody.angularVelocity;
+            if(m_UseAngularVelocity)
+            {
+                m_MovementSpeed = m_RigidBody.angularVelocity;
+            }
+            else
+            {
+                m_MovementSpeed = m_RigidBody.linearVelocity;
+            }
             Vector3 vehicleForward = GetVehicleForward();
             float forwardSpeed = Vector3.Dot(m_MovementSpeed, vehicleForward);
 
@@ -121,7 +132,7 @@ namespace GTA3Unity.Vehicles
             UpdateGear(forwardSpeed);
 
             float driveAcceleration = CalculateDriveAcceleration(forwardSpeed);
-            ApplyWheelForces(vehicleForward, driveAcceleration);
+            ApplyWheelForces(vehicleForward, forwardSpeed, driveAcceleration);
         }
 
         private void CalculatePedals(float forwardSpeed)
@@ -205,7 +216,9 @@ namespace GTA3Unity.Vehicles
 
         private float CalculateDriveAcceleration(float forwardSpeed)
         {
-            float targetVelocity = GetGearTargetVelocity(m_CurrentGear);
+            float gearVelocity = GetGearTargetVelocity(m_CurrentGear);
+            float speedMultiplier = GetGearSpeedMultiplier(m_CurrentGear);
+            float targetVelocity = gearVelocity * speedMultiplier;
             float driveDirection = m_CurrentGear == ReverseGear ? -1.0f : 1.0f;
             float speedError = driveDirection * (targetVelocity - forwardSpeed);
 
@@ -213,7 +226,8 @@ namespace GTA3Unity.Vehicles
                 $"[CarAcceleration] Drive calculation inputs: " +
                 $"gasPedal={m_fGasPedal:R}, brakePedal={m_fBrakePedal:R}, " +
                 $"handBrake={m_HandBrake}, drivenWheels={m_DrivenWheelCount}, " +
-                $"gear={m_CurrentGear}, targetVelocity={targetVelocity:R}, " +
+                $"gear={m_CurrentGear}, gearVelocity={gearVelocity:R}, " +
+                $"speedMultiplier={speedMultiplier:R}, targetVelocity={targetVelocity:R}, " +
                 $"driveDirection={driveDirection:R}, speedError={speedError:R}, " +
                 $"engineAcceleration={m_HandlingData.TransmissionData.EngineAcceleration:R}",
                 this);
@@ -238,25 +252,29 @@ namespace GTA3Unity.Vehicles
                 return 0.0f;
             }
 
-            int gearCount = GetGearCount();
-            float gearAccelerationMultiplier =
-                m_CurrentGear > ReverseGear && m_CurrentGear < gearCount
-                    ? LowerGearAccelerationMultiplier
-                    : 1.0f;
             float engineAcceleration = Mathf.Max(
                 0.0f,
                 m_HandlingData.TransmissionData.EngineAcceleration);
             float targetMagnitude = Mathf.Max(Mathf.Abs(targetVelocity), 0.01f);
+            float gearSpeedLimit = Mathf.Abs(gearVelocity);
+            if (Mathf.Abs(forwardSpeed) >= gearSpeedLimit)
+            {
+                Debug.Log(
+                    $"[CarAcceleration] Drive acceleration blocked at gear speed limit: " +
+                    $"speed={Mathf.Abs(forwardSpeed):R}, limit={gearSpeedLimit:R}",
+                    this);
+                return 0.0f;
+            }
+
             float driveAcceleration = driveDirection *
                 Mathf.Abs(m_fGasPedal) *
                 speedError *
-                engineAcceleration *
-                gearAccelerationMultiplier /
+                engineAcceleration /
                 targetMagnitude;
 
             Debug.Log(
                 $"[CarAcceleration] Drive acceleration result: " +
-                $"gearMultiplier={gearAccelerationMultiplier:R}, " +
+                $"speedMultiplier={speedMultiplier:R}, " +
                 $"targetMagnitude={targetMagnitude:R}, " +
                 $"driveAcceleration={driveAcceleration:R}",
                 this);
@@ -264,7 +282,10 @@ namespace GTA3Unity.Vehicles
             return driveAcceleration;
         }
 
-        private void ApplyWheelForces(Vector3 vehicleForward, float driveAcceleration)
+        private void ApplyWheelForces(
+            Vector3 vehicleForward,
+            float forwardSpeed,
+            float driveAcceleration)
         {
             float vehicleMass = Mathf.Max(1.0f, m_RigidBody.mass);
             float driveTorque = driveAcceleration * vehicleMass * m_WheelRadius /
@@ -272,6 +293,8 @@ namespace GTA3Unity.Vehicles
 
             float brakeAcceleration = Mathf.Max(0.0f, m_HandlingData.BrakeDeceleration) *
                 Mathf.Clamp01(m_fBrakePedal);
+            float coastingBrakeAcceleration = CalculateCoastingBrakeAcceleration(forwardSpeed);
+            brakeAcceleration += coastingBrakeAcceleration;
             float brakeForce = brakeAcceleration * vehicleMass;
             float brakeBias = Mathf.Clamp01(m_HandlingData.BrakeBias);
             float frontBrakeTorque = brakeForce * brakeBias * m_WheelRadius / 2.0f;
@@ -284,8 +307,9 @@ namespace GTA3Unity.Vehicles
             Debug.Log(
                 $"[CarAcceleration] Wheel force application: " +
                 $"driveAcceleration={driveAcceleration:R}, driveTorque={driveTorque:R}, " +
+                $"coastingBrakeAcceleration={coastingBrakeAcceleration:R}, " +
                 $"frontBrakeTorque={frontBrakeTorque:R}, rearBrakeTorque={rearBrakeTorque:R}, " +
-                $"rigidbodyVelocity={m_RigidBody.linearVelocity.ToString("R")}, " +
+                $"rigidbodyVelocity={(m_UseAngularVelocity ? m_RigidBody.angularVelocity.ToString("R") : m_RigidBody.linearVelocity.ToString("R"))}, " +
                 $"vehicleForward={vehicleForward.ToString("R")}",
                 this);
 
@@ -297,7 +321,7 @@ namespace GTA3Unity.Vehicles
                     continue;
                 }
 
-                bool braking = m_fBrakePedal > 0.0f || m_HandBrake;
+                bool braking = brakeAcceleration > 0.0f || m_HandBrake;
                 float driveSign = GetWheelDriveSign(wheel, vehicleForward);
                 wheel.motorTorque = !braking && IsDrivenWheel(i)
                     ? driveTorque * driveSign
@@ -312,6 +336,42 @@ namespace GTA3Unity.Vehicles
                     $"radius={wheel.radius:R}, suspensionDistance={wheel.suspensionDistance:R}",
                     this);
             }
+        }
+
+        private float CalculateCoastingBrakeAcceleration(float forwardSpeed)
+        {
+            if (Mathf.Abs(forwardSpeed) <= StopSpeed ||
+                Mathf.Abs(m_fGasPedal) > InputDeadZone ||
+                m_fBrakePedal > 0.0f ||
+                m_HandBrake)
+            {
+                return 0.0f;
+            }
+
+            float handlingBrakeDeceleration = Mathf.Max(
+                0.0f,
+                m_HandlingData.BrakeDeceleration);
+            float coastingDeceleration = Mathf.Max(
+                MinimumCoastingDeceleration,
+                handlingBrakeDeceleration * CoastingBrakeFraction);
+            float decelerationNeededToStopThisStep =
+                Mathf.Abs(forwardSpeed) / Mathf.Max(Time.fixedDeltaTime, 0.0001f);
+
+            return Mathf.Min(coastingDeceleration, decelerationNeededToStopThisStep);
+        }
+
+        private float GetGearSpeedMultiplier(int gear)
+        {
+            int gearCount = GetGearCount();
+            if (gear <= ReverseGear || gearCount <= 1 || gear >= gearCount)
+            {
+                return 1.0f;
+            }
+
+            // This matches re3's integer-division behavior in
+            // cTransmission::CalculateDriveAcceleration: lower forward gears
+            // use a four-times target-speed multiplier, while top gear uses 1.
+            return LowerGearSpeedMultiplier;
         }
 
         private void LogGearState(float forwardSpeed, int gearBeforeUpdate, int gearCount)
