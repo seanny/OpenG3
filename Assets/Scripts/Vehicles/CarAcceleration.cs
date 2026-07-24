@@ -113,7 +113,7 @@ namespace GTA3Unity.Vehicles
                 return;
             }
 
-            m_MovementSpeed = m_RigidBody.linearVelocity;
+            m_MovementSpeed = m_RigidBody.angularVelocity;
             Vector3 vehicleForward = GetVehicleForward();
             float forwardSpeed = Vector3.Dot(m_MovementSpeed, vehicleForward);
 
@@ -379,12 +379,30 @@ namespace GTA3Unity.Vehicles
             Vector3 vehicleForward)
         {
             return Vector3.Dot(wheel.transform.forward, vehicleForward) < 0.0f
-                ? 1.0f
-                : -1.0f;
+                ? -1.0f
+                : 1.0f;
         }
 
         private Vector3 GetVehicleForward()
         {
+            // The imported DFF model has its own basis rotation, so the car
+            // root's -transform.forward is not guaranteed to be the wheel
+            // rolling direction. Rear mounts are not affected by steering and
+            // already contain the wheel-frame basis correction.
+            Vector3 forward = Vector3.zero;
+            for (int i = 2; i < m_Wheels.Length; i++)
+            {
+                if (m_Wheels[i] != null)
+                {
+                    forward += m_Wheels[i].transform.forward;
+                }
+            }
+
+            if (forward.sqrMagnitude > 0.0001f)
+            {
+                return forward.normalized;
+            }
+
             return -transform.forward;
         }
     }
