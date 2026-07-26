@@ -15,6 +15,7 @@ namespace GTA3Unity.Vehicles
         Boost1G = 1,
         Boost2G = 2,
         RevBonnet = 4,
+        HangingBoot = 8,
         NoDoors = 0x10,
         IsVan = 0x20,
         IsBus = 0x40,

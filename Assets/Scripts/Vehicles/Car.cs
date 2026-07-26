@@ -7,6 +7,16 @@ using IdeCar = RenderWareIo.Structs.Ide.Car;
 
 namespace GTA3Unity.Vehicles
 {
+    public enum EVehicleDoorIndex
+    {
+        Bonnet = 0,
+        Boot,
+        FrontLeft,
+        FrontRight,
+        RearLeft,
+        RearRight
+    }
+
     public partial class Car : Vehicle
     {
         private static readonly Quaternion s_WheelColliderRotationCorrection =
@@ -42,8 +52,9 @@ namespace GTA3Unity.Vehicles
         protected bool m_IsBig;
         protected bool m_IsBus;
         protected bool m_IsLowVehicle;
-        
+
         [SerializeField] private CarAcceleration m_CarAcceleration;
+        [SerializeField] private List<VehicleDoor> m_Doors = new();
 
         public override void SetModel(int modelIndex)
         {
@@ -236,6 +247,54 @@ namespace GTA3Unity.Vehicles
             {
                 DisableVehicle($"Could not load the vehicle model for '{VehicleIdentifier}'.");
                 return;
+            }
+
+            for (int i = 0; i < Enum.GetNames(typeof(EVehicleDoorIndex)).Length; i++)
+            {
+                m_Doors.Add(new VehicleDoor());
+            }
+            if (m_IsBus)
+            {
+                m_Doors[(int)EVehicleDoorIndex.FrontLeft].OnStart(-(Mathf.PI / 2), 0f, 0, 2);
+                m_Doors[(int)EVehicleDoorIndex.FrontRight].OnStart(0f, Mathf.PI / 2, 0, 2);
+            }
+            else
+            {
+                m_Doors[(int)EVehicleDoorIndex.FrontLeft].OnStart(-(Mathf.PI * 0.4f), 0f, 0, 2);
+                m_Doors[(int)EVehicleDoorIndex.FrontRight].OnStart(0f, Mathf.PI * 0.4f, 0, 2);
+            }
+            if (m_IsVan)
+            {
+                m_Doors[(int)EVehicleDoorIndex.RearLeft].OnStart(-(Mathf.PI / 2), 0f, 1, 2);
+                m_Doors[(int)EVehicleDoorIndex.RearRight].OnStart(0f, Mathf.PI / 2, 0, 2);
+            }
+            else
+            {
+                m_Doors[(int)EVehicleDoorIndex.RearLeft].OnStart(-(Mathf.PI * 0.4f), 0f, 0, 2);
+                m_Doors[(int)EVehicleDoorIndex.RearRight].OnStart(0f, Mathf.PI * 0.4f, 1, 2);
+            }
+
+            EHandlingFlags handlingFlags = m_HandlingData.Flags;
+            if ((handlingFlags & EHandlingFlags.RevBonnet) != 0)
+            {
+                m_Doors[(int)EVehicleDoorIndex.Bonnet].OnStart(-(Mathf.PI * 0.3f), 0f, 1, 0);
+            }
+            else
+            {
+                m_Doors[(int)EVehicleDoorIndex.Bonnet].OnStart(0f, Mathf.PI * 0.3f, 1, 0);
+            }
+
+            if ((handlingFlags & EHandlingFlags.HangingBoot) != 0)
+            {
+                m_Doors[(int)EVehicleDoorIndex.Boot].OnStart(-(Mathf.PI * 0.4f), 0f, 0, 0);
+            }
+            else if ((handlingFlags & EHandlingFlags.TailGateBoot) != 0)
+            {
+                m_Doors[(int)EVehicleDoorIndex.Boot].OnStart(0f, Mathf.PI / 2, 1, 0);
+            }
+            else
+            {
+                m_Doors[(int)EVehicleDoorIndex.Boot].OnStart(-(Mathf.PI * 0.3f), 0f, 1, 0);
             }
 
             SetLayerRecursively(m_PedModel.transform, m_VehicleBodyLayer);
@@ -555,9 +614,9 @@ namespace GTA3Unity.Vehicles
             return new Vector3(value.x, value.z, -value.y);
         }
 
-        private Vector3 GetVehicleForward()
+        public Vector3 GetSpeed(Vector3 offset)
         {
-            return -transform.forward;
+            return m_RigidBody.linearVelocity + Vector3.Cross(m_RigidBody.angularVelocity, offset);
         }
     }
 }
