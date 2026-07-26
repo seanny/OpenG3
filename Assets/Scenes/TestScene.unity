@@ -2509,6 +2509,7 @@ MonoBehaviour:
   m_VehicleIdentifier: LANDSTAL
   m_Driver: {fileID: 0}
   m_CarAcceleration: {fileID: 0}
+  m_Doors: []
 --- !u!65 &1516343331
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -2646,7 +2647,7 @@ MonoBehaviour:
   m_fBrakePedal: 0
   m_CurrentGear: 1
   m_UseAngularVelocity: 0
-  m_EnableDiagnostics: 1
+  m_EnableDiagnostics: 0
   m_DiagnosticIntervalFrames: 10
   m_LogWheelDiagnostics: 1
   m_LogEveryInputSample: 0

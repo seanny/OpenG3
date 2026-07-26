@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using GTA3Unity.Core;
 using StarterAssets;
 using UnityEngine;
 using IdeCar = RenderWareIo.Structs.Ide.Car;
@@ -14,11 +15,21 @@ namespace GTA3Unity.Vehicles
         FrontLeft,
         FrontRight,
         RearLeft,
-        RearRight
+        RearRight,
+
+        DoorCount
     }
 
     public partial class Car : Vehicle
     {
+        public struct VehicleDoorState
+        {
+            public EVehicleDoorIndex DoorIndex;
+            public GameObject NonDamagedObject;
+            public GameObject DamagedObject;
+            public bool IsDamaged;
+        }
+
         private static readonly Quaternion s_WheelColliderRotationCorrection =
             Quaternion.Euler(0.0f, 180.0f, 0.0f);
 
@@ -39,9 +50,42 @@ namespace GTA3Unity.Vehicles
             "wheel_rb_dummy"
         };
 
+        private static readonly Dictionary<EVehicleDoorIndex, string> s_DoorFrameNames = new Dictionary<EVehicleDoorIndex, string>
+        {
+            { EVehicleDoorIndex.Bonnet, "bonnet_dummy" },
+            { EVehicleDoorIndex.FrontLeft, "door_lf_dummy" },
+            { EVehicleDoorIndex.FrontRight, "door_rf_dummy" },
+            { EVehicleDoorIndex.RearLeft, "door_lr_dummy" },
+            { EVehicleDoorIndex.RearRight, "door_rr_dummy" },
+            { EVehicleDoorIndex.Boot, "boot_dummy" },
+        };
+
+        private static readonly Dictionary<string, string> s_DoorFrameNonDamaged = new Dictionary<string, string>
+        {
+            { "bonnet_dummy", "bonnet_hi_ok" },
+            { "door_lf_dummy", "door_lf_hi_ok" },
+            { "door_rf_dummy", "door_rf_hi_ok" },
+            { "door_lr_dummy", "door_lr_hi_ok" },
+            { "door_rr_dummy", "door_rr_hi_ok" },
+            { "boot_dummy", "boot_hi_ok" },
+        };
+
+        private static readonly Dictionary<string, string> s_DoorFrameDamaged = new Dictionary<string, string>
+        {
+            { "bonnet_dummy", "bonnet_hi_dam" },
+            { "door_lf_dummy", "door_lf_hi_dam" },
+            { "door_rf_dummy", "door_rf_hi_dam" },
+            { "door_lr_dummy", "door_lr_hi_dam" },
+            { "door_rr_dummy", "door_rr_hi_dam" },
+            { "boot_dummy", "boot_hi_dam" },
+        };
+
+        private List<VehicleDoorState> m_VehicleDoorStates = new();
+
         private readonly WheelCollider[] m_Wheels = new WheelCollider[WheelCount];
         private readonly Transform[] m_WheelVisuals = new Transform[WheelCount];
         private readonly Quaternion[] m_WheelVisualRotationOffsets = new Quaternion[WheelCount];
+        private readonly Transform[] m_DoorVisuals = new Transform[WheelCount];
 
         private float m_WheelRadius;
         private LayerMask m_LayerMaskVehicleBody;
@@ -249,54 +293,6 @@ namespace GTA3Unity.Vehicles
                 return;
             }
 
-            for (int i = 0; i < Enum.GetNames(typeof(EVehicleDoorIndex)).Length; i++)
-            {
-                m_Doors.Add(new VehicleDoor());
-            }
-            if (m_IsBus)
-            {
-                m_Doors[(int)EVehicleDoorIndex.FrontLeft].OnStart(-(Mathf.PI / 2), 0f, 0, 2);
-                m_Doors[(int)EVehicleDoorIndex.FrontRight].OnStart(0f, Mathf.PI / 2, 0, 2);
-            }
-            else
-            {
-                m_Doors[(int)EVehicleDoorIndex.FrontLeft].OnStart(-(Mathf.PI * 0.4f), 0f, 0, 2);
-                m_Doors[(int)EVehicleDoorIndex.FrontRight].OnStart(0f, Mathf.PI * 0.4f, 0, 2);
-            }
-            if (m_IsVan)
-            {
-                m_Doors[(int)EVehicleDoorIndex.RearLeft].OnStart(-(Mathf.PI / 2), 0f, 1, 2);
-                m_Doors[(int)EVehicleDoorIndex.RearRight].OnStart(0f, Mathf.PI / 2, 0, 2);
-            }
-            else
-            {
-                m_Doors[(int)EVehicleDoorIndex.RearLeft].OnStart(-(Mathf.PI * 0.4f), 0f, 0, 2);
-                m_Doors[(int)EVehicleDoorIndex.RearRight].OnStart(0f, Mathf.PI * 0.4f, 1, 2);
-            }
-
-            EHandlingFlags handlingFlags = m_HandlingData.Flags;
-            if ((handlingFlags & EHandlingFlags.RevBonnet) != 0)
-            {
-                m_Doors[(int)EVehicleDoorIndex.Bonnet].OnStart(-(Mathf.PI * 0.3f), 0f, 1, 0);
-            }
-            else
-            {
-                m_Doors[(int)EVehicleDoorIndex.Bonnet].OnStart(0f, Mathf.PI * 0.3f, 1, 0);
-            }
-
-            if ((handlingFlags & EHandlingFlags.HangingBoot) != 0)
-            {
-                m_Doors[(int)EVehicleDoorIndex.Boot].OnStart(-(Mathf.PI * 0.4f), 0f, 0, 0);
-            }
-            else if ((handlingFlags & EHandlingFlags.TailGateBoot) != 0)
-            {
-                m_Doors[(int)EVehicleDoorIndex.Boot].OnStart(0f, Mathf.PI / 2, 1, 0);
-            }
-            else
-            {
-                m_Doors[(int)EVehicleDoorIndex.Boot].OnStart(-(Mathf.PI * 0.3f), 0f, 1, 0);
-            }
-
             SetLayerRecursively(m_PedModel.transform, m_VehicleBodyLayer);
 
             List<Renderer> lod0Renderers = new();
@@ -341,14 +337,52 @@ namespace GTA3Unity.Vehicles
                 wheelFrames[i] = FindChildByName(m_PedModel.transform, s_WheelFrameNames[i]);
                 if (wheelFrames[i] == null)
                 {
-                    DisableVehicle(
-                        $"Vehicle '{VehicleIdentifier}' is missing the wheel frame '{s_WheelFrameNames[i]}'.");
+                    DisableVehicle($"Vehicle '{VehicleIdentifier}' is missing the wheel frame '{s_WheelFrameNames[i]}'.");
                     return;
+                }
+            }
+
+            var dummies = m_PedModel.GetComponentsInChildren<DummyObject>();
+            foreach(var dummy in dummies)
+            {
+                foreach(var frameName in s_DoorFrameNames)
+                {
+                    if (dummy.name.Equals(frameName.Value, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        Debug.Log($"[Door Frame] Dummy Name={dummy.name} Frame Name={frameName.Value} Ide Car={ideCar.GameName}");
+                        string nonDamaged = string.Empty, damaged = string.Empty;
+                        foreach(var nonDamagedFrame in s_DoorFrameNonDamaged)
+                        {
+                            if(!nonDamagedFrame.Key.Equals(dummy.name))
+                            {
+                                continue;
+                            }
+                            nonDamaged = nonDamagedFrame.Value;
+                        }
+                        foreach(var damagedFrame in s_DoorFrameDamaged)
+                        {
+                            if(!damagedFrame.Key.Equals(dummy.name))
+                            {
+                                continue;
+                            }
+                            damaged = damagedFrame.Value;
+                        }
+                        if(string.IsNullOrEmpty(nonDamaged) || string.IsNullOrEmpty(damaged))
+                        {
+                            DisableVehicle($"Vehicle '{VehicleIdentifier}' is missing the door frame '{frameName}'.");
+                            return;
+                        }
+
+                        var vehDoor = dummy.gameObject.AddComponent<VehicleDoor>();
+                        CreateDoor(frameName.Key, ideCar, vehDoor, dummy, nonDamaged, damaged);
+                        break;
+                    }
                 }
             }
 
             ConfigureRigidbody();
             CreateWheels(ideCar, wheelFrames);
+            //CreateDoors(ideCar, doorFrames);
             m_CarAcceleration.Initialize(m_Wheels, m_WheelRadius, HandlingData);
             LoadVehicleDummy();
             m_IsInitialized = true;
@@ -368,9 +402,119 @@ namespace GTA3Unity.Vehicles
             m_RigidBody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         }
 
-        private void CreateWheels(
-            IdeCar ideCar,
-            Transform[] wheelFrames)
+        private void CreateDoor(EVehicleDoorIndex doorIndex, IdeCar car, VehicleDoor doorAnchor, DummyObject doorFrame, string nonDamaged, string damaged)
+        {
+            var vehicleDoorState = new VehicleDoorState();
+            vehicleDoorState.DoorIndex = doorIndex;
+            vehicleDoorState.IsDamaged = false;
+            if (m_IsBus)
+            {
+                if (doorIndex == EVehicleDoorIndex.FrontLeft)
+                {
+                    doorAnchor.OnStart(-(Mathf.PI / 2), 0f, 0, 2);
+                }
+                if (doorIndex == EVehicleDoorIndex.FrontRight)
+                {
+                    doorAnchor.OnStart(0f, Mathf.PI / 2, 0, 2);
+                }
+            }
+            else
+            {
+                if (doorIndex == EVehicleDoorIndex.FrontLeft)
+                {
+                    doorAnchor.OnStart(-(Mathf.PI / 0.4f), 0f, 0, 2);
+                }
+                if (doorIndex == EVehicleDoorIndex.FrontRight)
+                {
+                    doorAnchor.OnStart(0f, Mathf.PI / 0.4f, 0, 2);
+                }
+            }
+            if (m_IsVan)
+            {
+                if (doorIndex == EVehicleDoorIndex.RearLeft)
+                {
+                    doorAnchor.OnStart(-(Mathf.PI / 2), 0f, 1, 2);
+                }
+                if (doorIndex == EVehicleDoorIndex.RearRight)
+                {
+                    doorAnchor.OnStart(0f, Mathf.PI / 2, 0, 2);
+                }
+            }
+            else
+            {
+                if (doorIndex == EVehicleDoorIndex.RearLeft)
+                {
+                    doorAnchor.OnStart(-(Mathf.PI * 0.4f), 0f, 0, 2);
+                }
+                if (doorIndex == EVehicleDoorIndex.RearRight)
+                {
+                    doorAnchor.OnStart(0f, Mathf.PI * 0.4f, 1, 2);
+                }
+            }
+
+            EHandlingFlags handlingFlags = m_HandlingData.Flags;
+            if (handlingFlags.HasFlag(EHandlingFlags.RevBonnet))
+            {
+                if (doorIndex == EVehicleDoorIndex.Bonnet)
+                {
+                    doorAnchor.OnStart(-(Mathf.PI * 0.3f), 0f, 1, 0);
+                }
+            }
+            else
+            {
+                if (doorIndex == EVehicleDoorIndex.Bonnet)
+                {
+                    doorAnchor.OnStart(0f, Mathf.PI * 0.3f, 1, 0);
+                }
+            }
+
+            if ((handlingFlags & EHandlingFlags.HangingBoot) != 0)
+            {
+                if (doorIndex == EVehicleDoorIndex.Boot)
+                {
+                    doorAnchor.OnStart(-(Mathf.PI * 0.4f), 0f, 0, 0);
+                }
+            }
+            else if ((handlingFlags & EHandlingFlags.TailGateBoot) != 0)
+            {
+                if (doorIndex == EVehicleDoorIndex.Boot)
+                {
+                    doorAnchor.OnStart(0f, Mathf.PI / 2, 1, 0);
+                }
+            }
+            else
+            {
+                if (doorIndex == EVehicleDoorIndex.Boot)
+                {
+                    doorAnchor.OnStart(-(Mathf.PI * 0.3f), 0f, 1, 0);
+                }
+            }
+
+            var vehTrans = transform.GetChild(0);
+            int childCount = vehTrans.childCount;
+            for(int i = 0; i < childCount; i++)
+            {
+                if(vehTrans.GetChild(i).name.Equals(nonDamaged))
+                {
+
+                    vehicleDoorState.NonDamagedObject = vehTrans.GetChild(i).gameObject;
+                    vehicleDoorState.NonDamagedObject.transform.SetPositionAndRotation(doorFrame.transform.position, doorFrame.transform.rotation);
+                }
+                if(vehTrans.GetChild(i).name.Equals(damaged))
+                {
+                    vehicleDoorState.DamagedObject = vehTrans.GetChild(i).gameObject;
+                    vehicleDoorState.DamagedObject.transform.SetPositionAndRotation(doorFrame.transform.position, doorFrame.transform.rotation);
+                    vehicleDoorState.DamagedObject.SetActive(false);
+                }
+            }
+            m_VehicleDoorStates.Add(vehicleDoorState);
+            
+            //doorAnchor.transform.SetParent(transform, false);
+            doorAnchor.transform.SetPositionAndRotation(doorFrame.transform.position, doorFrame.transform.rotation);
+            //CreateDoorVisual(i, doorAnchor)
+        }
+
+        private void CreateWheels(IdeCar ideCar, Transform[] wheelFrames)
         {
             m_WheelRadius = ideCar.WheelScale * 0.5f;
 
@@ -443,7 +587,7 @@ namespace GTA3Unity.Vehicles
         {
             MeshFilter chassisMesh = FindMeshFilterByName(
                 m_PedModel.transform,
-                "chassis_vlo");
+                "chassis_hi");
 
             if (chassisMesh == null || chassisMesh.sharedMesh == null)
             {
@@ -502,6 +646,31 @@ namespace GTA3Unity.Vehicles
         private void LoadExhaust()
         {
             // TODO: Implement exhaust effects.
+        }
+
+        private void CreateDoorVisual(int wheelIndex, Transform wheelAnchor, int wheelModelId, float wheelScale)
+        {
+            if (wheelModelId <= 0)
+            {
+                Debug.LogWarning($"Vehicle '{VehicleIdentifier}' has no door model.");
+                return;
+            }
+
+            GameObject doorVisual = InstantiateModel(wheelModelId);
+            if (doorVisual == null)
+            {
+                Debug.LogWarning($"Could not load door model {wheelModelId} for vehicle '{VehicleIdentifier}'.");
+                return;
+            }
+
+            Quaternion visualRotation = doorVisual.transform.localRotation;
+            doorVisual.transform.SetParent(wheelAnchor, false);
+            doorVisual.transform.localPosition = Vector3.zero;
+            doorVisual.transform.localRotation = visualRotation;
+            doorVisual.transform.localScale = Vector3.one;
+
+            m_DoorVisuals[wheelIndex] = doorVisual.transform;
+            //m_DoorVisualRotationOffsets[wheelIndex] = visualRotation;
         }
 
         private void CreateWheelVisual(
