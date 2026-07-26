@@ -331,7 +331,6 @@ namespace GTA3Unity.Utility
                     mesh = CreateMesh(
                         geometry,
                         geometryName);
-                    Debug.Log($"Spawned geometry '{geometryName}'");
                 }
                 catch (Exception exception)
                 {
