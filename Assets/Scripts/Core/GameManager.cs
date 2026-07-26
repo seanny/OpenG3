@@ -67,10 +67,10 @@ namespace GTA3Unity.Core
 
         public void StartGta(string gtaRoot)
         {
-            const string vehicleJson = "Vehicle.json";
+            const string vehicleJson = "Vehicles.json";
             if(VehicleManager.Init(Path.Combine(Application.streamingAssetsPath, vehicleJson)) == false)
             {
-                Debug.LogError($"Vehicle.json does not exist");
+                Debug.LogError($"{vehicleJson} does not exist");
                 return;
             }
 

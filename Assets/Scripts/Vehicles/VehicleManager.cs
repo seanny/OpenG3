@@ -30,7 +30,7 @@ namespace GTA3Unity.Vehicles
                 return false;
             }
 
-            VehicleData = JsonUtility.FromJson<VehicleData>(pathToVehicleJson);
+            VehicleData = JsonUtility.FromJson<VehicleData>(File.ReadAllText(pathToVehicleJson));
             return true;
         }
     }
