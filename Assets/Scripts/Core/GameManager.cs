@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using GTA3Unity.UI;
+using GTA3Unity.Vehicles;
 using UnityEngine;
 using UnityEngine.Video;
 
@@ -66,6 +67,13 @@ namespace GTA3Unity.Core
 
         public void StartGta(string gtaRoot)
         {
+            const string vehicleJson = "Vehicle.json";
+            if(VehicleManager.Init(Path.Combine(Application.streamingAssetsPath, vehicleJson)) == false)
+            {
+                Debug.LogError($"Vehicle.json does not exist");
+                return;
+            }
+
             m_GtaDirectory = gtaRoot;
             if(!Directory.Exists(m_GtaDirectory))
             {

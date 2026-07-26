@@ -6,18 +6,9 @@ namespace GTA3Unity.Vehicles
     [RequireComponent(typeof(Rigidbody))]
     public class CarAcceleration : MonoBehaviour
     {
-        private const int ReverseGear = 0;
-        private const float ReverseSpeedRatio = 0.2f;
         private const float ShiftUpFraction = 2.0f / 3.0f;
-        private const float ShiftDownFraction = 0.42f;
-        private const float StopSpeed = 0.1f;
-        private const float InputDeadZone = 0.001f;
-        private const float HandbrakeTorque = 20_000.0f;
-        private const float LowerGearSpeedMultiplier = 4.0f;
-        private const float CoastingBrakeFraction = 0.1f;
-        private const float MinimumCoastingDeceleration = 0.5f;
 
-        [Header("GTA Acceleration State")]
+        [Header("Acceleration State")]
         [SerializeField]
         private Vector3 m_MovementSpeed;
 
@@ -69,8 +60,7 @@ namespace GTA3Unity.Vehicles
         private string m_LastDriveState = string.Empty;
 
         private bool IsPeriodicDiagnosticFrame =>
-            m_EnableDiagnostics &&
-            m_FixedUpdateCount % Mathf.Max(1, m_DiagnosticIntervalFrames) == 0;
+            m_EnableDiagnostics && m_FixedUpdateCount > 10;
 
         private void Awake()
         {
@@ -284,7 +274,7 @@ namespace GTA3Unity.Vehicles
             float absoluteForwardSpeed = Mathf.Abs(forwardSpeed);
 
             bool directionChangeBraking =
-                absoluteForwardSpeed > StopSpeed &&
+                absoluteForwardSpeed > VehicleManager.VehicleData.StopSpeed &&
                 forwardSpeed * m_RequestedPedal < 0.0f;
 
             // GTA brakes before changing direction. Once almost stationary,
@@ -299,6 +289,7 @@ namespace GTA3Unity.Vehicles
                 (directionChangeBraking != m_WasDirectionChangeBraking ||
                  IsPeriodicDiagnosticFrame))
             {
+                m_FixedUpdateCount = 0;
                 Debug.Log(
                     $"[CarAcceleration] Pedal state: " +
                     $"requested={m_RequestedPedal:R}, gas={m_fGasPedal:R}, " +
@@ -318,28 +309,28 @@ namespace GTA3Unity.Vehicles
             int gearCount = GetGearCount();
             int gearBeforeUpdate = m_CurrentGear;
 
-            if (Mathf.Abs(forwardSpeed) <= StopSpeed)
+            if (Mathf.Abs(forwardSpeed) <= VehicleManager.VehicleData.StopSpeed)
             {
-                if (m_fGasPedal > InputDeadZone)
+                if (m_fGasPedal > VehicleManager.VehicleData.InputDeadZone)
                 {
                     m_CurrentGear = 1;
                 }
-                else if (m_fGasPedal < -InputDeadZone)
+                else if (m_fGasPedal < -VehicleManager.VehicleData.InputDeadZone)
                 {
-                    m_CurrentGear = ReverseGear;
+                    m_CurrentGear = VehicleManager.VehicleData.ReverseGear;
                 }
 
                 LogGearState(forwardSpeed, gearBeforeUpdate, gearCount);
                 return;
             }
 
-            if (m_CurrentGear == ReverseGear)
+            if (m_CurrentGear == VehicleManager.VehicleData.ReverseGear)
             {
                 LogGearState(forwardSpeed, gearBeforeUpdate, gearCount);
                 return;
             }
 
-            if (m_fGasPedal < -InputDeadZone)
+            if (m_fGasPedal < -VehicleManager.VehicleData.InputDeadZone)
             {
                 LogGearState(forwardSpeed, gearBeforeUpdate, gearCount);
                 return;
@@ -364,10 +355,10 @@ namespace GTA3Unity.Vehicles
             float gearVelocity = GetGearTargetVelocity(m_CurrentGear);
             float speedMultiplier = GetGearSpeedMultiplier(m_CurrentGear);
             float targetVelocity = gearVelocity * speedMultiplier;
-            float driveDirection = m_CurrentGear == ReverseGear ? -1.0f : 1.0f;
+            float driveDirection = m_CurrentGear == VehicleManager.VehicleData.ReverseGear ? -1.0f : 1.0f;
             float speedError = driveDirection * (targetVelocity - forwardSpeed);
 
-            if (Mathf.Abs(m_fGasPedal) <= InputDeadZone)
+            if (Mathf.Abs(m_fGasPedal) <= VehicleManager.VehicleData.InputDeadZone)
             {
                 LogDriveState(
                     "Blocked:NoGas",
@@ -454,12 +445,12 @@ namespace GTA3Unity.Vehicles
 
             float brakeForce = brakeAcceleration * vehicleMass;
             float brakeBias = Mathf.Clamp01(m_HandlingData.BrakeBias);
-            float frontBrakeTorque = brakeForce * brakeBias * m_WheelRadius / 2.0f;
-            float rearBrakeTorque = brakeForce * (1.0f - brakeBias) * m_WheelRadius / 2.0f;
+            float frontBrakeTorque = brakeForce * brakeBias * m_WheelRadius * VehicleManager.VehicleData.BrakeForceMultiplier;
+            float rearBrakeTorque = brakeForce * (1.0f - brakeBias) * m_WheelRadius * VehicleManager.VehicleData.BrakeForceMultiplier;
 
             if (m_HandBrake)
             {
-                rearBrakeTorque = Mathf.Max(rearBrakeTorque, HandbrakeTorque);
+                rearBrakeTorque = Mathf.Max(rearBrakeTorque, VehicleManager.VehicleData.HandbrakeTorque);
             }
 
             int groundedWheelCount = 0;
@@ -493,30 +484,27 @@ namespace GTA3Unity.Vehicles
                     : 0.0f;
                 wheel.brakeTorque = i < 2 ? frontBrakeTorque : rearBrakeTorque;
 
-                if (m_EnableDiagnostics &&
-                    m_LogWheelDiagnostics &&
-                    IsPeriodicDiagnosticFrame)
+                if (m_EnableDiagnostics && m_LogWheelDiagnostics)
                 {
                     LogWheelSnapshot(i, wheel, vehicleForward, driven, driveSign);
                 }
             }
 
-            if (m_EnableDiagnostics &&
-                groundedWheelCount != m_LastGroundedWheelCount)
+            if (m_EnableDiagnostics)
             {
-                Debug.Log(
-                    $"[CarAcceleration] Ground contact changed: " +
-                    $"before={m_LastGroundedWheelCount}, after={groundedWheelCount}, " +
-                    $"wheelCount={m_Wheels.Length}, " +
-                    $"linearVelocity={m_RigidBody.linearVelocity.ToString("R")}, " +
-                    $"angularVelocity={m_RigidBody.angularVelocity.ToString("R")}",
-                    this);
+                if(groundedWheelCount != m_LastGroundedWheelCount)
+                {
+                    Debug.Log(
+                        $"[CarAcceleration] Ground contact changed: " +
+                        $"before={m_LastGroundedWheelCount}, after={groundedWheelCount}, " +
+                        $"wheelCount={m_Wheels.Length}, " +
+                        $"linearVelocity={m_RigidBody.linearVelocity.ToString("R")}, " +
+                        $"angularVelocity={m_RigidBody.angularVelocity.ToString("R")}",
+                        this);
 
-                m_LastGroundedWheelCount = groundedWheelCount;
-            }
+                    m_LastGroundedWheelCount = groundedWheelCount;
+                }
 
-            if (IsPeriodicDiagnosticFrame)
-            {
                 Debug.Log(
                     $"[CarAcceleration] Force summary: " +
                     $"forwardSpeed={forwardSpeed:R}, driveAcceleration={driveAcceleration:R}, " +
@@ -528,6 +516,7 @@ namespace GTA3Unity.Vehicles
                     $"groundedWheels={groundedWheelCount}/{m_Wheels.Length}",
                     this);
             }
+
         }
 
         private void LogMotionSnapshot(
@@ -625,8 +614,8 @@ namespace GTA3Unity.Vehicles
 
         private float CalculateCoastingBrakeAcceleration(float forwardSpeed)
         {
-            if (Mathf.Abs(forwardSpeed) <= StopSpeed ||
-                Mathf.Abs(m_fGasPedal) > InputDeadZone ||
+            if (Mathf.Abs(forwardSpeed) <= VehicleManager.VehicleData.StopSpeed ||
+                Mathf.Abs(m_fGasPedal) > VehicleManager.VehicleData.InputDeadZone ||
                 m_fBrakePedal > 0.0f ||
                 m_HandBrake)
             {
@@ -635,10 +624,10 @@ namespace GTA3Unity.Vehicles
 
             float handlingBrakeDeceleration = Mathf.Max(
                 0.0f,
-                m_HandlingData.BrakeDeceleration);
+                m_HandlingData.BrakeDeceleration) * 2;
             float coastingDeceleration = Mathf.Max(
-                MinimumCoastingDeceleration,
-                handlingBrakeDeceleration * CoastingBrakeFraction);
+                VehicleManager.VehicleData.MinimumCoastingDeceleration,
+                handlingBrakeDeceleration * VehicleManager.VehicleData.CoastingBrakeFraction);
             float decelerationNeededToStopThisStep =
                 Mathf.Abs(forwardSpeed) / Mathf.Max(Time.fixedDeltaTime, 0.0001f);
 
@@ -649,12 +638,12 @@ namespace GTA3Unity.Vehicles
         {
             int gearCount = GetGearCount();
 
-            if (gear <= ReverseGear || gearCount <= 1 || gear >= gearCount)
+            if (gear <= VehicleManager.VehicleData.ReverseGear || gearCount <= 1 || gear >= gearCount)
             {
                 return 1.0f;
             }
 
-            return LowerGearSpeedMultiplier;
+            return VehicleManager.VehicleData.LowerGearSpeedMultiplier;
         }
 
         private void LogGearState(float forwardSpeed, int gearBeforeUpdate, int gearCount)
@@ -687,10 +676,10 @@ namespace GTA3Unity.Vehicles
 
         private float GetGearTargetVelocity(int gear)
         {
-            if (gear == ReverseGear)
+            if (gear == VehicleManager.VehicleData.ReverseGear)
             {
                 return -Mathf.Max(0.0f, m_HandlingData.TransmissionData.MaxVelocity) *
-                    ReverseSpeedRatio;
+                    VehicleManager.VehicleData.ReverseSpeedRatio;
             }
 
             return Mathf.Max(0.0f, m_HandlingData.TransmissionData.MaxVelocity) *
@@ -717,7 +706,7 @@ namespace GTA3Unity.Vehicles
             return Mathf.Lerp(
                 lowerGearSpeed,
                 GetGearTargetVelocity(gear),
-                ShiftDownFraction);
+                VehicleManager.VehicleData.ShiftDownFraction);
         }
 
         private bool IsDrivenWheel(int wheelIndex)

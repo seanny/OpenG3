@@ -9,6 +9,26 @@ using UnityEngine;
 // "heavy vehicle is given more power by the game than a light vehicle with the same Engine Acceleration rate. This is why some heavy trucks can reach a higher top speeds than the light sports cars."
 namespace GTA3Unity.Vehicles
 {
+    [Flags]
+    public enum EHandlingFlags
+    {
+        Boost1G = 1,
+        Boost2G = 2,
+        RevBonnet = 4,
+        NoDoors = 0x10,
+        IsVan = 0x20,
+        IsBus = 0x40,
+        IsLow = 0x80,
+        DoubleExhaust = 0x100,
+        TailGateBoot = 0x200,
+        NoSwingBoot = 0x400,
+        NonPlayerStabiliser = 0x800,
+        NeutralHandling = 0x1000,
+        HasNoRoof = 0x2000,
+        IsBig = 0x4000,
+        HalogenLights = 0x8000
+    }
+
     public class TransmissionData
     {
         public int NumberOfGears; // Doesn't appear to do much outside of audio
@@ -41,7 +61,7 @@ namespace GTA3Unity.Vehicles
         public float SuspensionUpperLimit;
         public float SuspensionLowerLimit;
         public float SuspensionBias;
-        public uint Flags; // Hex-encoded handling flags
+        public EHandlingFlags Flags; // Hex-encoded handling flags
         public int FrontLights; // 0 = long, 1 = small, 2 = big, 3 = tall
         public int RearLights; // 0 = long, 1 = small, 2 = big, 3 = tall
 
@@ -170,9 +190,9 @@ namespace GTA3Unity.Vehicles
             return int.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
         }
 
-        private static uint ParseFlags(string value)
+        private static EHandlingFlags ParseFlags(string value)
         {
-            return uint.Parse(value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            return (EHandlingFlags)uint.Parse(value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
         }
 
         private static EDriveType ParseDriveType(string value)

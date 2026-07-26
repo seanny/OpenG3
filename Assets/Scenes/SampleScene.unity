@@ -1942,6 +1942,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e03a7be4e226164b9905fa49150f792, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GTA3Unity.Vehicles.CarAcceleration
+  BrakeForceMultiplier: 2
   m_MovementSpeed: {x: 0, y: 0, z: 0}
   m_fGasPedal: 0
   m_fBrakePedal: 0

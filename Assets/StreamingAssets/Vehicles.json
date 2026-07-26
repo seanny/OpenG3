@@ -1,0 +1,15 @@
+{
+    "ReverseSpeedRatio": 0.2,
+    "ShiftDownFraction": 0.42,
+    "StopSpeed": 0.1,
+    "InputDeadZone": 0.001,
+    "HandbrakeTorque": 20000.0,
+    "LowerGearSpeedMultiplier": 4.0,
+    "CoastingBrakeFraction": 0.1,
+    "MinimumCoastingDeceleration": 0.5,
+    "BrakeForceMultiplier": 2.0,
+    "EnableDiagnostics": false,
+    "DiagnosticIntervalFrames": 10,
+    "LogWheelDiagnostics": true,
+    "LogEveryInputSample": false
+}
