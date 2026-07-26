@@ -30,7 +30,7 @@ namespace GTA3Unity.Vehicles
             }
         }
 
-        public bool SetHandlingData(string vehicleIdentifier)
+        public virtual bool SetHandlingData(string vehicleIdentifier)
         {
             if(!HandlingManager.Data.TryGetValue(vehicleIdentifier, out HandlingData handlingData))
             {

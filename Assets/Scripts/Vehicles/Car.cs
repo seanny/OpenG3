@@ -38,11 +38,26 @@ namespace GTA3Unity.Vehicles
         private int m_VehicleBodyLayer = -1;
         private int m_VehicleWheelLayer = -1;
         private bool m_IsInitialized;
+        protected bool m_IsVan;
+        protected bool m_IsBig;
+        protected bool m_IsBus;
+        protected bool m_IsLowVehicle;
+        
         [SerializeField] private CarAcceleration m_CarAcceleration;
 
         public override void SetModel(int modelIndex)
         {
             base.SetModel(modelIndex);
+        }
+
+        public override bool SetHandlingData(string vehicleIdentifier)
+        {
+            var result = base.SetHandlingData(vehicleIdentifier);
+            m_IsVan = m_HandlingData.Flags.HasFlag(EHandlingFlags.IsVan);
+            m_IsBig = m_HandlingData.Flags.HasFlag(EHandlingFlags.IsBig);
+            m_IsBus = m_HandlingData.Flags.HasFlag(EHandlingFlags.IsBus);
+            m_IsLowVehicle = m_HandlingData.Flags.HasFlag(EHandlingFlags.IsLow);
+            return result;
         }
 
         private void Awake()
