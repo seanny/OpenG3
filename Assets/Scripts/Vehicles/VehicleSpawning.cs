@@ -28,7 +28,7 @@ namespace GTA3Unity.Vehicles
             public string GameName;
             public EVehicleClass VehicleClass;
             public int Frequency;
-            public Vehicle Vehicle;
+            public int ModelIndex;
         }
 
         public static List<VehicleDefinition> Vehicles { get; private set; } = new();
@@ -45,9 +45,7 @@ namespace GTA3Unity.Vehicles
             };
             if(string.Equals(ideCar.Type, "car", System.StringComparison.OrdinalIgnoreCase))
             {
-                definition.Vehicle = new Car();
-                definition.Vehicle.SetVehicleIdentifier(ideCar.HandlingId);
-                definition.Vehicle.ModelIndex = ideCar.Id;
+                definition.ModelIndex = ideCar.Id;
                 Debug.Log($"Added car '{definition.VehicleId}': {definition.HandlingId}, {definition.GameName}, {definition.VehicleClass}, {definition.Frequency}");
             }
 
@@ -93,15 +91,17 @@ namespace GTA3Unity.Vehicles
 
             GameObject gameObject = new GameObject();
             gameObject.name = $"{validDefinitions[randIndex].GameName}_{gameObject.GetEntityId()}";
+            // Set the pose before adding the component. Adding Car also adds its
+            // Rigidbody and runs Awake, so the object must not be initialized at
+            // the default origin first.
+            gameObject.transform.SetPositionAndRotation(position, (Quaternion)rotation);
 
-            Vehicle vehicle = validDefinitions[randIndex].Vehicle;
-            if (validDefinitions[randIndex].Vehicle is Car)
+            if (validDefinitions[randIndex].ModelIndex > 0)
             {
                 Car car = gameObject.AddComponent<Car>();
                 car.SetVehicleIdentifier(validDefinitions[randIndex].HandlingId);
-                car.SetModel(vehicle.ModelIndex);
+                car.SetModel(validDefinitions[randIndex].ModelIndex);
                 //car.SetHandlingData(vehicle.VehicleIdentifier);
-                car.transform.SetPositionAndRotation(position, (Quaternion)rotation);
                 return car;
             }
             return null;
