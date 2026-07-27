@@ -1,0 +1,21 @@
+;
+; Title     :   vehicle_settings.dat
+; Purpose   :   Global runtime vehicle tuning constants
+; Author    :   Sean McElholm
+; Date      :   27/07/2026
+;
+ReverseSpeedRatio 0.2
+ShiftDownFraction 0.42
+StopSpeed 0.1
+InputDeadZone 0.001
+HandbrakeTorque 20000.0
+LowerGearSpeedMultiplier 4.0
+BrakeForceMultiplier 4.0
+WheelGripMultiplier 2.0
+GameSpeedToMetersPerSecond 50.0
+
+; Diagnostics - WARNING: These write Logs every frame!!!
+EnableDiagnostics false
+DiagnosticIntervalFrames 10
+LogWheelDiagnostics true
+LogEveryInputSample false
