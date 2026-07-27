@@ -86,6 +86,8 @@ namespace GTA3Unity.Vehicles
     public static class HandlingManager
     {
         private const int HandlingFieldCount = 32;
+        private const float GameFramesPerSecond = 50.0f;
+        private const float KilometersPerHourToMetersPerSecond = 1000.0f / (60.0f * 60.0f);
         private static readonly Dictionary<string, HandlingData> s_HandlingData =
             new(StringComparer.OrdinalIgnoreCase);
 
@@ -134,6 +136,8 @@ namespace GTA3Unity.Vehicles
 
                 try
                 {
+                    float rawMaxVelocity = ParseFloat(parts[13]);
+                    float rawEngineAcceleration = ParseFloat(parts[14]);
                     HandlingData handlingData = new()
                     {
                         VehicleIdentifier = parts[0],
@@ -147,8 +151,8 @@ namespace GTA3Unity.Vehicles
                         TransmissionData = new TransmissionData
                         {
                             NumberOfGears = ParseInt(parts[12]),
-                            MaxVelocity = ParseFloat(parts[13]),
-                            EngineAcceleration = ParseFloat(parts[14]),
+                            MaxVelocity = rawMaxVelocity,
+                            EngineAcceleration = rawEngineAcceleration,
                             DriveType = ParseDriveType(parts[15]),
                             EngineType = ParseEngineType(parts[16])
                         },
@@ -169,6 +173,12 @@ namespace GTA3Unity.Vehicles
                         RearLights = ParseInt(parts[31])
                     };
 
+                    handlingData.TransmissionData.MaxVelocity =
+                        ConvertMaxVelocityToGameUnits(
+                            handlingData,
+                            rawMaxVelocity,
+                            rawEngineAcceleration);
+
 #if UNITY_EDITOR
                     Debug.Log(handlingData.ToString());
 #endif
@@ -179,6 +189,55 @@ namespace GTA3Unity.Vehicles
                     Debug.LogWarning($"Skipping handling.cfg line {lineIndex + 1}: {exception.Message}");
                 }
             }
+        }
+
+        private static float ConvertMaxVelocityToGameUnits(
+            HandlingData handlingData,
+            float rawMaxVelocity,
+            float rawEngineAcceleration)
+        {
+            // re3 stores vehicle velocity in metres per 50 Hz game frame.
+            float maxVelocity = rawMaxVelocity *
+                KilometersPerHourToMetersPerSecond /
+                GameFramesPerSecond;
+
+            // HandlingMgr converts acceleration to game-frame units before
+            // using it to derive the drag-limited cruise speed.
+            float engineAcceleration = rawEngineAcceleration *
+                0.4f /
+                (GameFramesPerSecond * GameFramesPerSecond);
+            float velocity = maxVelocity;
+            float a = 0.0f;
+            float b = 100.0f;
+            float mass = Mathf.Max(1.0f, handlingData.Mass);
+            float aerodynamicArea = Mathf.Abs(
+                handlingData.Dimensions.x * handlingData.Dimensions.z);
+
+            while (a < b && velocity > 0.0f)
+            {
+                velocity -= 0.01f;
+                a = engineAcceleration / 6.0f;
+
+                float dragAcceleration = 0.5f *
+                    velocity *
+                    velocity *
+                    aerodynamicArea /
+                    mass;
+                b = -velocity *
+                    (1.0f / (dragAcceleration + 1.0f) - 1.0f);
+            }
+
+            // The RC Bandit keeps the handling.cfg maximum velocity. Other
+            // vehicles receive re3's 1.2x headroom over the cruise velocity.
+            if (!string.Equals(
+                    handlingData.VehicleIdentifier,
+                    "RCBANDIT",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                maxVelocity = velocity * 1.2f;
+            }
+
+            return Mathf.Max(0.0f, maxVelocity);
         }
 
         private static float ParseFloat(string value)

@@ -7,6 +7,7 @@
     "LowerGearSpeedMultiplier": 4.0,
     "BrakeForceMultiplier": 4.0,
     "WheelGripMultiplier": 2.0,
+    "GameSpeedToMetersPerSecond": 50.0,
     "EnableDiagnostics": false,
     "DiagnosticIntervalFrames": 10,
     "LogWheelDiagnostics": true,

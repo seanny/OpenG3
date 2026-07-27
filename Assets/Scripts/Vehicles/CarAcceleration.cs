@@ -388,6 +388,16 @@ namespace GTA3Unity.Vehicles
                 return 0.0f;
             }
 
+            float maxVelocity = GetMaxVelocityMetersPerSecond();
+            if (forwardSpeed > maxVelocity)
+            {
+                LogDriveState(
+                    "Blocked:MaxVelocity",
+                    $"forwardSpeed={forwardSpeed:R}, maxVelocity={maxVelocity:R}, " +
+                    $"transmissionMaxVelocity={m_HandlingData.TransmissionData.MaxVelocity:R}");
+                return 0.0f;
+            }
+
             if (speedError <= 0.0f)
             {
                 LogDriveState(
@@ -401,16 +411,6 @@ namespace GTA3Unity.Vehicles
                 0.0f,
                 m_HandlingData.TransmissionData.EngineAcceleration);
             float targetMagnitude = Mathf.Max(Mathf.Abs(targetVelocity), 0.01f);
-            float gearSpeedLimit = Mathf.Abs(gearVelocity);
-
-            if (Mathf.Abs(forwardSpeed) >= gearSpeedLimit)
-            {
-                LogDriveState(
-                    "Blocked:GearSpeedLimit",
-                    $"speed={Mathf.Abs(forwardSpeed):R}, limit={gearSpeedLimit:R}, " +
-                    $"gear={m_CurrentGear}");
-                return 0.0f;
-            }
 
             float driveAcceleration = driveDirection *
                 Mathf.Abs(m_fGasPedal) *
@@ -657,15 +657,22 @@ namespace GTA3Unity.Vehicles
 
         private float GetGearTargetVelocity(int gear)
         {
+            float maxVelocity = GetMaxVelocityMetersPerSecond();
+
             if (gear == VehicleManager.VehicleData.ReverseGear)
             {
-                return -Mathf.Max(0.0f, m_HandlingData.TransmissionData.MaxVelocity) *
+                return -maxVelocity *
                     VehicleManager.VehicleData.ReverseSpeedRatio;
             }
 
-            return Mathf.Max(0.0f, m_HandlingData.TransmissionData.MaxVelocity) *
+            return maxVelocity *
                 gear /
                 GetGearCount();
+        }
+
+        private float GetMaxVelocityMetersPerSecond()
+        {
+            return Mathf.Max(0.0f, m_HandlingData.TransmissionData.MaxVelocity) * VehicleManager.VehicleData.GameSpeedToMetersPerSecond;
         }
 
         private float GetShiftUpSpeed(int gear)

@@ -16,6 +16,7 @@ namespace GTA3Unity.Vehicles
         public float LowerGearSpeedMultiplier;
         public float BrakeForceMultiplier;
         public float WheelGripMultiplier;
+        public float GameSpeedToMetersPerSecond;
     }
 
     public static class VehicleManager
