@@ -1888,7 +1888,6 @@ MonoBehaviour:
   m_VehicleIdentifier: LANDSTAL
   m_Driver: {fileID: 0}
   m_CarAcceleration: {fileID: 0}
-  m_Doors: []
 --- !u!54 &532789614
 Rigidbody:
   m_ObjectHideFlags: 0
