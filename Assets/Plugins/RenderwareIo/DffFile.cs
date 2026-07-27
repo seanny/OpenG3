@@ -63,7 +63,6 @@ namespace RenderWareIo
             }
 
             string targetName = Path.GetFileNameWithoutExtension(modelName);
-            Debug.Log($"Loading embedded model {targetName}");
             FrameList frameList = this.Dff.Clump.FrameList;
             int rootFrameIndex = FindFrame(frameList, targetName);
 

@@ -178,10 +178,6 @@ namespace GTA3Unity.Vehicles
                             handlingData,
                             rawMaxVelocity,
                             rawEngineAcceleration);
-
-#if UNITY_EDITOR
-                    Debug.Log(handlingData.ToString());
-#endif
                     s_HandlingData[handlingData.VehicleIdentifier] = handlingData;
                 }
                 catch (Exception exception) when (exception is FormatException || exception is OverflowException)

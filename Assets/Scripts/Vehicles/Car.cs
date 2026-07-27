@@ -115,6 +115,11 @@ namespace GTA3Unity.Vehicles
                 yield return null;
             }
 
+            while(string.IsNullOrEmpty(VehicleIdentifier))
+            {
+                yield return null;
+            }
+
             if (FileLoader.Instance == null)
             {
                 DisableVehicle("FileLoader was destroyed before initialization completed.");

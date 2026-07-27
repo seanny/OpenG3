@@ -362,6 +362,10 @@ namespace GTA3Unity
                     m_LooseDff.Add(Path.GetFileName(path),dffFile);
                 }
             }
+            foreach(var car in m_Cars)
+            {
+                VehicleSpawning.AddVehicle(car);
+            }
         }
 
         public void LoadWorldMap()

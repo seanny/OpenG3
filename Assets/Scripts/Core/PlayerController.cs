@@ -241,6 +241,12 @@ namespace GTA3Unity.Core
 
         private void FindVehicles()
         {
+            if(Input.GetKeyUp(KeyCode.Alpha0))
+            {
+                // Temp debug spawn random vehicle
+                EVehicleClass vehicleClass = (EVehicleClass)UnityEngine.Random.Range(0, (int)EVehicleClass.TotalVehicleClasses);
+                VehicleSpawning.SpawnRandomVehicle(vehicleClass, transform.position);
+            }
             if(Input.GetKeyUp(KeyCode.F))
             {
                 Vehicle[] vehs = GameObject.FindObjectsByType<Vehicle>();

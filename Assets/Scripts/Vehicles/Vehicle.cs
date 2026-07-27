@@ -23,11 +23,11 @@ namespace GTA3Unity.Vehicles
         {
             m_RigidBody = GetComponent<Rigidbody>();
             Debug.Assert(m_RigidBody != null);
-            if(!string.IsNullOrEmpty(m_VehicleIdentifier) && HandlingManager.Data.Count > 0)
-            {
-                // Allow testing in the editor
-                SetHandlingData(m_VehicleIdentifier);
-            }
+        }
+
+        public void SetVehicleIdentifier(string vehicleIdentifier)
+        {
+            m_VehicleIdentifier = vehicleIdentifier;
         }
 
         public virtual bool SetHandlingData(string vehicleIdentifier)
