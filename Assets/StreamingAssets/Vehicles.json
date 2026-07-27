@@ -5,8 +5,6 @@
     "InputDeadZone": 0.001,
     "HandbrakeTorque": 20000.0,
     "LowerGearSpeedMultiplier": 4.0,
-    "CoastingBrakeFraction": 0.1,
-    "MinimumCoastingDeceleration": 0.5,
     "BrakeForceMultiplier": 4.0,
     "WheelGripMultiplier": 2.0,
     "EnableDiagnostics": false,

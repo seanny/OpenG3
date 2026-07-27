@@ -14,8 +14,6 @@ namespace GTA3Unity.Vehicles
         public float InputDeadZone;
         public float HandbrakeTorque;
         public float LowerGearSpeedMultiplier;
-        public float CoastingBrakeFraction;
-        public float MinimumCoastingDeceleration;
         public float BrakeForceMultiplier;
         public float WheelGripMultiplier;
     }

@@ -440,8 +440,6 @@ namespace GTA3Unity.Vehicles
 
             float brakeAcceleration = Mathf.Max(0.0f, m_HandlingData.BrakeDeceleration) *
                 Mathf.Clamp01(m_fBrakePedal);
-            float coastingBrakeAcceleration = CalculateCoastingBrakeAcceleration(forwardSpeed);
-            brakeAcceleration += coastingBrakeAcceleration;
 
             float brakeForce = brakeAcceleration * vehicleMass;
             float brakeBias = Mathf.Clamp01(m_HandlingData.BrakeBias);
@@ -514,10 +512,9 @@ namespace GTA3Unity.Vehicles
                 Debug.Log(
                     $"[CarAcceleration] Force summary: " +
                     $"forwardSpeed={forwardSpeed:R}, driveAcceleration={driveAcceleration:R}, " +
-                    $"driveTorquePerDrivenWheel={driveTorque:R}, " +
-                    $"brakeAcceleration={brakeAcceleration:R}, " +
-                    $"coastingBrakeAcceleration={coastingBrakeAcceleration:R}, " +
-                    $"frontBrakeTorque={frontBrakeTorque:R}, " +
+                     $"driveTorquePerDrivenWheel={driveTorque:R}, " +
+                     $"brakeAcceleration={brakeAcceleration:R}, " +
+                     $"frontBrakeTorque={frontBrakeTorque:R}, " +
                     $"rearBrakeTorque={rearBrakeTorque:R}, " +
                     $"groundedWheels={groundedWheelCount}/{m_Wheels.Length}",
                     this);
@@ -616,28 +613,6 @@ namespace GTA3Unity.Vehicles
                 this);
 
             m_LastDriveState = state;
-        }
-
-        private float CalculateCoastingBrakeAcceleration(float forwardSpeed)
-        {
-            if (Mathf.Abs(forwardSpeed) <= VehicleManager.VehicleData.StopSpeed ||
-                Mathf.Abs(m_fGasPedal) > VehicleManager.VehicleData.InputDeadZone ||
-                m_fBrakePedal > 0.0f ||
-                m_HandBrake)
-            {
-                return 0.0f;
-            }
-
-            float handlingBrakeDeceleration = Mathf.Max(
-                0.0f,
-                m_HandlingData.BrakeDeceleration) * 2;
-            float coastingDeceleration = Mathf.Max(
-                VehicleManager.VehicleData.MinimumCoastingDeceleration,
-                handlingBrakeDeceleration * VehicleManager.VehicleData.CoastingBrakeFraction);
-            float decelerationNeededToStopThisStep =
-                Mathf.Abs(forwardSpeed) / Mathf.Max(Time.fixedDeltaTime, 0.0001f);
-
-            return Mathf.Min(coastingDeceleration, decelerationNeededToStopThisStep);
         }
 
         private float GetGearSpeedMultiplier(int gear)
