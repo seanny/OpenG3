@@ -17,6 +17,7 @@ namespace GTA3Unity.Vehicles
         public float CoastingBrakeFraction;
         public float MinimumCoastingDeceleration;
         public float BrakeForceMultiplier;
+        public float WheelGripMultiplier;
     }
 
     public static class VehicleManager

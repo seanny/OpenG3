@@ -136,10 +136,17 @@ namespace GTA3Unity.Vehicles
                 wheel.suspensionSpring = suspension;
 
                 float axleGripBias = isFrontWheel ? frontGripBias : rearGripBias;
+                float wheelGripMultiplier = Mathf.Max(
+                    0.01f,
+                    VehicleManager.VehicleData.WheelGripMultiplier);
                 wheel.forwardFriction = CreateFrictionCurve(
-                    Mathf.Max(0.01f, handlingData.TractionLoss) * axleGripBias);
+                    Mathf.Max(0.01f, handlingData.TractionLoss) *
+                    axleGripBias *
+                    wheelGripMultiplier);
                 wheel.sidewaysFriction = CreateFrictionCurve(
-                    Mathf.Max(0.01f, handlingData.TractionMultiplier) * axleGripBias);
+                    Mathf.Max(0.01f, handlingData.TractionMultiplier) *
+                    axleGripBias *
+                    wheelGripMultiplier);
 
                 Wheels[wheelIndex] = wheel;
                 CreateWheelVisual(
@@ -223,7 +230,7 @@ namespace GTA3Unity.Vehicles
                 extremumSlip = 0.4f,
                 extremumValue = 1.0f,
                 asymptoteSlip = 0.8f,
-                asymptoteValue = 0.75f,
+                asymptoteValue = 0.9f,
                 stiffness = stiffness
             };
         }

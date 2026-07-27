@@ -450,6 +450,12 @@ namespace GTA3Unity.Vehicles
 
             if (m_HandBrake)
             {
+                // GTA's handbrake is a very aggressive stop. Apply it to both
+                // axles so the rear wheels cannot carry the entire braking
+                // load and turn the vehicle into a slide.
+                frontBrakeTorque = Mathf.Max(
+                    frontBrakeTorque,
+                    VehicleManager.VehicleData.HandbrakeTorque);
                 rearBrakeTorque = Mathf.Max(rearBrakeTorque, VehicleManager.VehicleData.HandbrakeTorque);
             }
 
