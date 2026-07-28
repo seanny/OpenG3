@@ -1,5 +1,8 @@
+using System.Diagnostics;
+using GTA3Unity.Debugging;
 using StarterAssets;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 namespace GTA3Unity.Vehicles
 {
@@ -61,6 +64,8 @@ namespace GTA3Unity.Vehicles
 
         private bool IsPeriodicDiagnosticFrame =>
             m_EnableDiagnostics && m_FixedUpdateCount > 10;
+
+        private float m_CalculatePedals;
 
         private void Awake()
         {
@@ -269,6 +274,7 @@ namespace GTA3Unity.Vehicles
 
         private void CalculatePedals(float forwardSpeed)
         {
+            Stopwatch stopwatch = Stopwatch.StartNew();
             m_fGasPedal = m_RequestedPedal;
             m_fBrakePedal = 0.0f;
             float absoluteForwardSpeed = Mathf.Abs(forwardSpeed);
@@ -302,10 +308,13 @@ namespace GTA3Unity.Vehicles
             }
 
             m_WasDirectionChangeBraking = directionChangeBraking;
+            stopwatch.Stop();
+            PerformanceMonitor.SetValue("CalculatePedals", stopwatch.Elapsed.TotalMilliseconds);
         }
 
         private void UpdateGear(float forwardSpeed)
         {
+            Stopwatch stopwatch = Stopwatch.StartNew();
             int gearCount = GetGearCount();
             int gearBeforeUpdate = m_CurrentGear;
 
@@ -321,18 +330,24 @@ namespace GTA3Unity.Vehicles
                 }
 
                 LogGearState(forwardSpeed, gearBeforeUpdate, gearCount);
+                stopwatch.Stop();
+                PerformanceMonitor.SetValue("UpdateGear", stopwatch.Elapsed.TotalMilliseconds);
                 return;
             }
 
             if (m_CurrentGear == VehicleManager.VehicleData.ReverseGear)
             {
                 LogGearState(forwardSpeed, gearBeforeUpdate, gearCount);
+                stopwatch.Stop();
+                PerformanceMonitor.SetValue("UpdateGear", stopwatch.Elapsed.TotalMilliseconds);
                 return;
             }
 
             if (m_fGasPedal < -VehicleManager.VehicleData.InputDeadZone)
             {
                 LogGearState(forwardSpeed, gearBeforeUpdate, gearCount);
+                stopwatch.Stop();
+                PerformanceMonitor.SetValue("UpdateGear", stopwatch.Elapsed.TotalMilliseconds);
                 return;
             }
 
@@ -348,10 +363,13 @@ namespace GTA3Unity.Vehicles
             }
 
             LogGearState(forwardSpeed, gearBeforeUpdate, gearCount);
+            stopwatch.Stop();
+            PerformanceMonitor.SetValue("UpdateGear", stopwatch.Elapsed.TotalMilliseconds);
         }
 
         private float CalculateDriveAcceleration(float forwardSpeed)
         {
+            Stopwatch stopwatch = Stopwatch.StartNew();
             float gearVelocity = GetGearTargetVelocity(m_CurrentGear);
             float speedMultiplier = GetGearSpeedMultiplier(m_CurrentGear);
             float targetVelocity = gearVelocity * speedMultiplier;
@@ -363,6 +381,8 @@ namespace GTA3Unity.Vehicles
                 LogDriveState(
                     "Blocked:NoGas",
                     $"gas={m_fGasPedal:R}, requested={m_RequestedPedal:R}");
+                stopwatch.Stop();
+                PerformanceMonitor.SetValue("CalculateDriveAcceleration", stopwatch.Elapsed.TotalMilliseconds);
                 return 0.0f;
             }
 
@@ -371,12 +391,16 @@ namespace GTA3Unity.Vehicles
                 LogDriveState(
                     "Blocked:FootBrake",
                     $"brake={m_fBrakePedal:R}, forwardSpeed={forwardSpeed:R}");
+                stopwatch.Stop();
+                PerformanceMonitor.SetValue("CalculateDriveAcceleration", stopwatch.Elapsed.TotalMilliseconds);
                 return 0.0f;
             }
 
             if (m_HandBrake)
             {
                 LogDriveState("Blocked:HandBrake", "handBrake=true");
+                stopwatch.Stop();
+                PerformanceMonitor.SetValue("CalculateDriveAcceleration", stopwatch.Elapsed.TotalMilliseconds);
                 return 0.0f;
             }
 
@@ -385,6 +409,8 @@ namespace GTA3Unity.Vehicles
                 LogDriveState(
                     "Blocked:NoDrivenWheels",
                     $"driveType={m_HandlingData.TransmissionData.DriveType}");
+                stopwatch.Stop();
+                PerformanceMonitor.SetValue("CalculateDriveAcceleration", stopwatch.Elapsed.TotalMilliseconds);
                 return 0.0f;
             }
 
@@ -395,6 +421,8 @@ namespace GTA3Unity.Vehicles
                     "Blocked:MaxVelocity",
                     $"forwardSpeed={forwardSpeed:R}, maxVelocity={maxVelocity:R}, " +
                     $"transmissionMaxVelocity={m_HandlingData.TransmissionData.MaxVelocity:R}");
+                stopwatch.Stop();
+                PerformanceMonitor.SetValue("CalculateDriveAcceleration", stopwatch.Elapsed.TotalMilliseconds);
                 return 0.0f;
             }
 
@@ -404,6 +432,8 @@ namespace GTA3Unity.Vehicles
                     "Blocked:SpeedError",
                     $"speedError={speedError:R}, forwardSpeed={forwardSpeed:R}, " +
                     $"targetVelocity={targetVelocity:R}, driveDirection={driveDirection:R}");
+                stopwatch.Stop();
+                PerformanceMonitor.SetValue("CalculateDriveAcceleration", stopwatch.Elapsed.TotalMilliseconds);
                 return 0.0f;
             }
 
@@ -426,6 +456,8 @@ namespace GTA3Unity.Vehicles
                 $"speedError={speedError:R}, engineAcceleration={engineAcceleration:R}, " +
                 $"driveAcceleration={driveAcceleration:R}");
 
+            stopwatch.Stop();
+            PerformanceMonitor.SetValue("CalculateDriveAcceleration", stopwatch.Elapsed.TotalMilliseconds);
             return driveAcceleration;
         }
 
@@ -434,6 +466,7 @@ namespace GTA3Unity.Vehicles
             float forwardSpeed,
             float driveAcceleration)
         {
+            Stopwatch stopwatch = Stopwatch.StartNew();
             float vehicleMass = Mathf.Max(1.0f, m_RigidBody.mass);
             float driveTorque = driveAcceleration * vehicleMass * m_WheelRadius /
                 Mathf.Max(1, m_DrivenWheelCount);
@@ -493,6 +526,8 @@ namespace GTA3Unity.Vehicles
                     LogWheelSnapshot(i, wheel, vehicleForward, driven, driveSign);
                 }
             }
+            stopwatch.Stop();
+            PerformanceMonitor.SetValue("CalculateDriveAcceleration", stopwatch.Elapsed.TotalMilliseconds);
 
             if (m_EnableDiagnostics)
             {
@@ -519,7 +554,6 @@ namespace GTA3Unity.Vehicles
                     $"groundedWheels={groundedWheelCount}/{m_Wheels.Length}",
                     this);
             }
-
         }
 
         private void LogMotionSnapshot(
