@@ -124,51 +124,11 @@ namespace GTA3Unity.Vehicles
             m_LastDriveState = string.Empty;
             m_IsInitialized = m_DrivenWheelCount > 0;
 
-            Debug.Log(
-                $"[CarAcceleration] Initialize: " +
-                $"componentId={GetInstanceID()}, " +
-                $"rigidbodyId={(m_RigidBody != null ? m_RigidBody.GetInstanceID() : 0)}, " +
-                $"wheels={m_Wheels.Length}, drivenWheels={m_DrivenWheelCount}, " +
-                $"initialized={m_IsInitialized}, " +
-                $"driveType={m_HandlingData.TransmissionData.DriveType}, " +
-                $"gears={GetGearCount()}, " +
-                $"maxVelocity={m_HandlingData.TransmissionData.MaxVelocity:R}, " +
-                $"engineAcceleration={m_HandlingData.TransmissionData.EngineAcceleration:R}, " +
-                $"brakeDeceleration={m_HandlingData.BrakeDeceleration:R}, " +
-                $"brakeBias={m_HandlingData.BrakeBias:R}, " +
-                $"wheelRadius={m_WheelRadius:R}, " +
-                $"rigidbodyMass={m_RigidBody?.mass:R}, " +
-                $"isKinematic={m_RigidBody?.isKinematic}, " +
-                $"useGravity={m_RigidBody?.useGravity}, " +
-                $"interpolation={m_RigidBody?.interpolation}, " +
-                $"collisionDetection={m_RigidBody?.collisionDetectionMode}",
-                this);
-
             if (!m_IsInitialized)
             {
                 Debug.LogError(
                     "[CarAcceleration] Initialize found no driven wheels. " +
                     "Check wheel ordering and TransmissionData.DriveType.",
-                    this);
-            }
-
-            for (int i = 0; i < m_Wheels.Length; i++)
-            {
-                WheelCollider wheel = m_Wheels[i];
-
-                Debug.Log(
-                    $"[CarAcceleration] Wheel {i} initialization: " +
-                    $"exists={wheel != null}, driven={wheel != null && IsDrivenWheel(i)}, " +
-                    $"enabled={wheel != null && wheel.enabled}, " +
-                    $"object='{(wheel != null ? wheel.name : "<null>")}', " +
-                    $"instanceId={(wheel != null ? wheel.GetInstanceID() : 0)}, " +
-                    $"position={(wheel != null ? wheel.transform.position.ToString("R") : "<null>")}, " +
-                    $"localPosition={(wheel != null ? wheel.transform.localPosition.ToString("R") : "<null>")}, " +
-                    $"forward={(wheel != null ? wheel.transform.forward.ToString("R") : "<null>")}, " +
-                    $"up={(wheel != null ? wheel.transform.up.ToString("R") : "<null>")}, " +
-                    $"radius={(wheel != null ? wheel.radius.ToString("R") : "<null>")}, " +
-                    $"mass={(wheel != null ? wheel.mass.ToString("R") : "<null>")}, " +
-                    $"sprungMass={(wheel != null ? wheel.sprungMass.ToString("R") : "<null>")}",
                     this);
             }
         }
@@ -378,9 +338,6 @@ namespace GTA3Unity.Vehicles
 
             if (Mathf.Abs(m_fGasPedal) <= VehicleManager.VehicleData.InputDeadZone)
             {
-                LogDriveState(
-                    "Blocked:NoGas",
-                    $"gas={m_fGasPedal:R}, requested={m_RequestedPedal:R}");
                 stopwatch.Stop();
                 PerformanceMonitor.SetValue("CalculateDriveAcceleration", stopwatch.Elapsed.TotalMilliseconds);
                 return 0.0f;
@@ -388,9 +345,6 @@ namespace GTA3Unity.Vehicles
 
             if (m_fBrakePedal > 0.0f)
             {
-                LogDriveState(
-                    "Blocked:FootBrake",
-                    $"brake={m_fBrakePedal:R}, forwardSpeed={forwardSpeed:R}");
                 stopwatch.Stop();
                 PerformanceMonitor.SetValue("CalculateDriveAcceleration", stopwatch.Elapsed.TotalMilliseconds);
                 return 0.0f;
@@ -398,7 +352,6 @@ namespace GTA3Unity.Vehicles
 
             if (m_HandBrake)
             {
-                LogDriveState("Blocked:HandBrake", "handBrake=true");
                 stopwatch.Stop();
                 PerformanceMonitor.SetValue("CalculateDriveAcceleration", stopwatch.Elapsed.TotalMilliseconds);
                 return 0.0f;
@@ -406,9 +359,6 @@ namespace GTA3Unity.Vehicles
 
             if (m_DrivenWheelCount == 0)
             {
-                LogDriveState(
-                    "Blocked:NoDrivenWheels",
-                    $"driveType={m_HandlingData.TransmissionData.DriveType}");
                 stopwatch.Stop();
                 PerformanceMonitor.SetValue("CalculateDriveAcceleration", stopwatch.Elapsed.TotalMilliseconds);
                 return 0.0f;
@@ -417,10 +367,6 @@ namespace GTA3Unity.Vehicles
             float maxVelocity = GetMaxVelocityMetersPerSecond();
             if (forwardSpeed > maxVelocity)
             {
-                LogDriveState(
-                    "Blocked:MaxVelocity",
-                    $"forwardSpeed={forwardSpeed:R}, maxVelocity={maxVelocity:R}, " +
-                    $"transmissionMaxVelocity={m_HandlingData.TransmissionData.MaxVelocity:R}");
                 stopwatch.Stop();
                 PerformanceMonitor.SetValue("CalculateDriveAcceleration", stopwatch.Elapsed.TotalMilliseconds);
                 return 0.0f;
@@ -428,33 +374,14 @@ namespace GTA3Unity.Vehicles
 
             if (speedError <= 0.0f)
             {
-                LogDriveState(
-                    "Blocked:SpeedError",
-                    $"speedError={speedError:R}, forwardSpeed={forwardSpeed:R}, " +
-                    $"targetVelocity={targetVelocity:R}, driveDirection={driveDirection:R}");
                 stopwatch.Stop();
                 PerformanceMonitor.SetValue("CalculateDriveAcceleration", stopwatch.Elapsed.TotalMilliseconds);
                 return 0.0f;
             }
 
-            float engineAcceleration = Mathf.Max(
-                0.0f,
-                m_HandlingData.TransmissionData.EngineAcceleration);
+            float engineAcceleration = Mathf.Max(0.0f, m_HandlingData.TransmissionData.EngineAcceleration);
             float targetMagnitude = Mathf.Max(Mathf.Abs(targetVelocity), 0.01f);
-
-            float driveAcceleration = driveDirection *
-                Mathf.Abs(m_fGasPedal) *
-                speedError *
-                engineAcceleration /
-                targetMagnitude;
-
-            LogDriveState(
-                "Driving",
-                $"gear={m_CurrentGear}, gas={m_fGasPedal:R}, " +
-                $"forwardSpeed={forwardSpeed:R}, gearVelocity={gearVelocity:R}, " +
-                $"speedMultiplier={speedMultiplier:R}, targetVelocity={targetVelocity:R}, " +
-                $"speedError={speedError:R}, engineAcceleration={engineAcceleration:R}, " +
-                $"driveAcceleration={driveAcceleration:R}");
+            float driveAcceleration = driveDirection * Mathf.Abs(m_fGasPedal) * speedError * engineAcceleration / targetMagnitude;
 
             stopwatch.Stop();
             PerformanceMonitor.SetValue("CalculateDriveAcceleration", stopwatch.Elapsed.TotalMilliseconds);
@@ -466,13 +393,10 @@ namespace GTA3Unity.Vehicles
             float forwardSpeed,
             float driveAcceleration)
         {
-            Stopwatch stopwatch = Stopwatch.StartNew();
             float vehicleMass = Mathf.Max(1.0f, m_RigidBody.mass);
-            float driveTorque = driveAcceleration * vehicleMass * m_WheelRadius /
-                Mathf.Max(1, m_DrivenWheelCount);
+            float driveTorque = driveAcceleration * vehicleMass * m_WheelRadius / Mathf.Max(1, m_DrivenWheelCount);
 
-            float brakeAcceleration = Mathf.Max(0.0f, m_HandlingData.BrakeDeceleration) *
-                Mathf.Clamp01(m_fBrakePedal);
+            float brakeAcceleration = Mathf.Max(0.0f, m_HandlingData.BrakeDeceleration) * Mathf.Clamp01(m_fBrakePedal);
 
             float brakeForce = brakeAcceleration * vehicleMass;
             float brakeBias = Mathf.Clamp01(m_HandlingData.BrakeBias);
@@ -484,9 +408,7 @@ namespace GTA3Unity.Vehicles
                 // GTA's handbrake is a very aggressive stop. Apply it to both
                 // axles so the rear wheels cannot carry the entire braking
                 // load and turn the vehicle into a slide.
-                frontBrakeTorque = Mathf.Max(
-                    frontBrakeTorque,
-                    VehicleManager.VehicleData.HandbrakeTorque);
+                frontBrakeTorque = Mathf.Max(frontBrakeTorque, VehicleManager.VehicleData.HandbrakeTorque);
                 rearBrakeTorque = Mathf.Max(rearBrakeTorque, VehicleManager.VehicleData.HandbrakeTorque);
             }
 
@@ -494,16 +416,14 @@ namespace GTA3Unity.Vehicles
 
             for (int i = 0; i < m_Wheels.Length; i++)
             {
+                Stopwatch stopwatch = Stopwatch.StartNew();
                 WheelCollider wheel = m_Wheels[i];
                 if (wheel == null)
                 {
                     if (m_EnableDiagnostics && IsPeriodicDiagnosticFrame)
                     {
-                        Debug.LogWarning(
-                            $"[CarAcceleration] Wheel {i} is null during force application.",
-                            this);
+                        Debug.LogWarning($"[CarAcceleration] Wheel {i} is null during force application.", this);
                     }
-
                     continue;
                 }
 
@@ -516,43 +436,10 @@ namespace GTA3Unity.Vehicles
                 bool driven = IsDrivenWheel(i);
                 float driveSign = GetWheelDriveSign(wheel, vehicleForward);
 
-                wheel.motorTorque = !braking && driven
-                    ? driveTorque * driveSign
-                    : 0.0f;
+                wheel.motorTorque = !braking && driven ? driveTorque * driveSign : 0.0f;
                 wheel.brakeTorque = i < 2 ? frontBrakeTorque : rearBrakeTorque;
-
-                if (m_EnableDiagnostics && m_LogWheelDiagnostics)
-                {
-                    LogWheelSnapshot(i, wheel, vehicleForward, driven, driveSign);
-                }
-            }
-            stopwatch.Stop();
-            PerformanceMonitor.SetValue("CalculateDriveAcceleration", stopwatch.Elapsed.TotalMilliseconds);
-
-            if (m_EnableDiagnostics)
-            {
-                if(groundedWheelCount != m_LastGroundedWheelCount)
-                {
-                    Debug.Log(
-                        $"[CarAcceleration] Ground contact changed: " +
-                        $"before={m_LastGroundedWheelCount}, after={groundedWheelCount}, " +
-                        $"wheelCount={m_Wheels.Length}, " +
-                        $"linearVelocity={m_RigidBody.linearVelocity.ToString("R")}, " +
-                        $"angularVelocity={m_RigidBody.angularVelocity.ToString("R")}",
-                        this);
-
-                    m_LastGroundedWheelCount = groundedWheelCount;
-                }
-
-                Debug.Log(
-                    $"[CarAcceleration] Force summary: " +
-                    $"forwardSpeed={forwardSpeed:R}, driveAcceleration={driveAcceleration:R}, " +
-                     $"driveTorquePerDrivenWheel={driveTorque:R}, " +
-                     $"brakeAcceleration={brakeAcceleration:R}, " +
-                     $"frontBrakeTorque={frontBrakeTorque:R}, " +
-                    $"rearBrakeTorque={rearBrakeTorque:R}, " +
-                    $"groundedWheels={groundedWheelCount}/{m_Wheels.Length}",
-                    this);
+                stopwatch.Stop();
+                PerformanceMonitor.SetValue("ApplyWheelForces", stopwatch.Elapsed.TotalMilliseconds);
             }
         }
 
@@ -741,9 +628,7 @@ namespace GTA3Unity.Vehicles
                 (!isFrontWheel && driveType == EDriveType.BackWheel);
         }
 
-        private static float GetWheelDriveSign(
-            WheelCollider wheel,
-            Vector3 vehicleForward)
+        private static float GetWheelDriveSign(WheelCollider wheel, Vector3 vehicleForward)
         {
             // WheelCollider's positive motor torque drives the contact patch
             // opposite to the collider transform's forward axis. The logs
@@ -751,9 +636,7 @@ namespace GTA3Unity.Vehicles
             // these imported wheel frames. Compare the actual rolling
             // direction so the motor torque sign matches vehicleForward.
             Vector3 wheelRollingDirection = GetWheelRollingDirection(wheel);
-            return Vector3.Dot(wheelRollingDirection, vehicleForward) < 0.0f
-                ? -1.0f
-                : 1.0f;
+            return Vector3.Dot(wheelRollingDirection, vehicleForward) < 0.0f ? -1.0f : 1.0f;
         }
 
         private static Vector3 GetWheelRollingDirection(WheelCollider wheel)
