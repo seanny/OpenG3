@@ -148,6 +148,14 @@ namespace GTA3Unity.Core
             vehicle.SetDriver(this);
         }
 
+        public void ExitCar()
+        {
+            SetPedState(EPedState.OnFoot);
+            m_Vehicle.ClearDriver();
+            TeleportPlayer(m_Vehicle.transform.position + m_Vehicle.transform.up * 2); // TP up for now, in future we want to TP to car door
+            m_Vehicle = null;
+        }
+
         public void TeleportPlayer(Vector3 position, Quaternion? rotation = null)
         {
             _controller.enabled = false;
@@ -229,6 +237,11 @@ namespace GTA3Unity.Core
                 case EPedState.Driving:
                     if(m_Vehicle == null)
                     {
+                        return;
+                    }
+                    if(Input.GetKeyUp(KeyCode.F))
+                    {
+                        ExitCar();
                         return;
                     }
                     m_Vehicle.OnInput(_input);
