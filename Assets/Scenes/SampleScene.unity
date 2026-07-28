@@ -1885,6 +1885,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e4c8f05fc2e3ed94692e6ec1f13cab8c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GTA3Unity.Vehicles.Car
+  ModelIndex: 0
   m_VehicleIdentifier: LANDSTAL
   m_Driver: {fileID: 0}
   m_CarAcceleration: {fileID: 0}
@@ -4564,6 +4565,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a4923ac39913b5d478a2e53311c6e708, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GTA3Unity.Core.PlayerController
+  ModelIndex: 0
   m_PedState: 0
   MoveSpeed: 1
   SprintSpeed: 10
