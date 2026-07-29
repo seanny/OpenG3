@@ -27,23 +27,6 @@ namespace GTA3Unity.Vehicles
         [SerializeField]
         private bool m_UseAngularVelocity;
 
-        [Header("Diagnostics")]
-        [SerializeField]
-        private bool m_EnableDiagnostics = true;
-
-        [SerializeField]
-        [Min(1)]
-        [Tooltip("Number of FixedUpdate calls between full motion and wheel snapshots.")]
-        private int m_DiagnosticIntervalFrames = 10;
-
-        [SerializeField]
-        [Tooltip("Include RPM, slip, contact-force and alignment data for every wheel.")]
-        private bool m_LogWheelDiagnostics = true;
-
-        [SerializeField]
-        [Tooltip("Log every OnInput call instead of only input changes.")]
-        private bool m_LogEveryInputSample;
-
         private Rigidbody m_RigidBody;
         private WheelCollider[] m_Wheels = new WheelCollider[0];
         private HandlingData m_HandlingData;
@@ -62,25 +45,11 @@ namespace GTA3Unity.Vehicles
         private bool m_LastUseAngularVelocity;
         private string m_LastDriveState = string.Empty;
 
-        private bool IsPeriodicDiagnosticFrame =>
-            m_EnableDiagnostics && m_FixedUpdateCount > 10;
-
         private float m_CalculatePedals;
 
         private void Awake()
         {
             m_RigidBody = GetComponent<Rigidbody>();
-
-            if (m_EnableDiagnostics)
-            {
-                Debug.Log(
-                    $"[CarAcceleration] Awake: componentId={GetInstanceID()}, " +
-                    $"rigidbodyId={(m_RigidBody != null ? m_RigidBody.GetInstanceID() : 0)}, " +
-                    $"object='{name}', active={gameObject.activeInHierarchy}, enabled={enabled}, " +
-                    $"position={transform.position.ToString("R")}, " +
-                    $"rotation={transform.rotation.eulerAngles.ToString("R")}",
-                    this);
-            }
         }
 
         internal void Initialize(
@@ -254,7 +223,6 @@ namespace GTA3Unity.Vehicles
                     m_CurrentGear = VehicleManager.VehicleData.ReverseGear;
                 }
 
-                LogGearState(forwardSpeed, gearBeforeUpdate, gearCount);
                 stopwatch.Stop();
                 PerformanceMonitor.SetValue("UpdateGear", stopwatch.Elapsed.TotalMilliseconds);
                 return;
@@ -262,7 +230,6 @@ namespace GTA3Unity.Vehicles
 
             if (m_CurrentGear == VehicleManager.VehicleData.ReverseGear)
             {
-                LogGearState(forwardSpeed, gearBeforeUpdate, gearCount);
                 stopwatch.Stop();
                 PerformanceMonitor.SetValue("UpdateGear", stopwatch.Elapsed.TotalMilliseconds);
                 return;
@@ -270,7 +237,6 @@ namespace GTA3Unity.Vehicles
 
             if (m_fGasPedal < -VehicleManager.VehicleData.InputDeadZone)
             {
-                LogGearState(forwardSpeed, gearBeforeUpdate, gearCount);
                 stopwatch.Stop();
                 PerformanceMonitor.SetValue("UpdateGear", stopwatch.Elapsed.TotalMilliseconds);
                 return;
@@ -287,7 +253,6 @@ namespace GTA3Unity.Vehicles
                 m_CurrentGear--;
             }
 
-            LogGearState(forwardSpeed, gearBeforeUpdate, gearCount);
             stopwatch.Stop();
             PerformanceMonitor.SetValue("UpdateGear", stopwatch.Elapsed.TotalMilliseconds);
         }
@@ -385,10 +350,6 @@ namespace GTA3Unity.Vehicles
                 WheelCollider wheel = m_Wheels[i];
                 if (wheel == null)
                 {
-                    if (m_EnableDiagnostics && IsPeriodicDiagnosticFrame)
-                    {
-                        Debug.LogWarning($"[CarAcceleration] Wheel {i} is null during force application.", this);
-                    }
                     continue;
                 }
 
@@ -482,25 +443,6 @@ namespace GTA3Unity.Vehicles
                 this);
         }
 
-        private void LogDriveState(string state, string details)
-        {
-            if (!m_EnableDiagnostics)
-            {
-                return;
-            }
-
-            if (state == m_LastDriveState && !IsPeriodicDiagnosticFrame)
-            {
-                return;
-            }
-
-            Debug.Log(
-                $"[CarAcceleration] Drive state: {state}; {details}",
-                this);
-
-            m_LastDriveState = state;
-        }
-
         private float GetGearSpeedMultiplier(int gear)
         {
             int gearCount = GetGearCount();
@@ -511,29 +453,6 @@ namespace GTA3Unity.Vehicles
             }
 
             return VehicleManager.VehicleData.LowerGearSpeedMultiplier;
-        }
-
-        private void LogGearState(float forwardSpeed, int gearBeforeUpdate, int gearCount)
-        {
-            if (!m_EnableDiagnostics)
-            {
-                return;
-            }
-
-            bool gearChanged = gearBeforeUpdate != m_CurrentGear;
-            if (!gearChanged && !IsPeriodicDiagnosticFrame)
-            {
-                return;
-            }
-
-            Debug.Log(
-                $"[CarAcceleration] Gear state: " +
-                $"before={gearBeforeUpdate}, after={m_CurrentGear}, changed={gearChanged}, " +
-                $"count={gearCount}, targetVelocity={GetGearTargetVelocity(m_CurrentGear):R}, " +
-                $"forwardSpeed={forwardSpeed:R}, " +
-                $"shiftUpSpeed={(m_CurrentGear < gearCount ? GetShiftUpSpeed(m_CurrentGear) : 0.0f):R}, " +
-                $"shiftDownSpeed={(m_CurrentGear > 1 ? GetShiftDownSpeed(m_CurrentGear) : 0.0f):R}",
-                this);
         }
 
         private int GetGearCount()

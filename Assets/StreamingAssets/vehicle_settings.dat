@@ -14,9 +14,3 @@ LowerGearSpeedMultiplier 4.0
 BrakeForceMultiplier 4.0
 WheelGripMultiplier 2.0
 GameSpeedToMetersPerSecond 50.0
-
-; Diagnostics - WARNING: These write Logs every frame!!!
-EnableDiagnostics false
-DiagnosticIntervalFrames 10
-LogWheelDiagnostics true
-LogEveryInputSample false

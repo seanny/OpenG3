@@ -38,10 +38,6 @@ This status is based on the current source. "Completed" means that the code path
 
 ## Work in progress
 
-- **The global settings file and parser are out of sync.** `vehicle_settings.dat` contains `EnableDiagnostics`, `DiagnosticIntervalFrames`, `LogWheelDiagnostics`, and `LogEveryInputSample`, but `VehicleData` does not define or load them. Unknown setting names are silently accepted. `ReverseGear` is read by the driving code but is not present in the current settings file, so it remains the default value.
-
-- **Diagnostics need finishing.** `CarAcceleration.m_DiagnosticIntervalFrames` is never used; the periodic threshold is hard-coded, and the force summary and wheel diagnostics can log every physics frame when diagnostics are enabled. The build also reports obsolete `GetInstanceID` warnings.
-
 - **Runtime car integration is incomplete.** A `Car` can be placed in a scene and initialised, but the world loader only spawns `IdeObj` instances. It does not turn car IDE records or IPL instances into `Car` objects, so cars are not populated into the game world automatically.
 
 - **Driving needs runtime validation and handling tuning.** The current propulsion is a Unity `WheelCollider` approximation. It has no vehicle-specific test coverage, and the wheel-frame direction/sign, grip, suspension, acceleration, gear thresholds, and braking values still need in-game validation against GTA III behaviour.
