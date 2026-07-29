@@ -2912,6 +2912,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GTA3Unity.Debugging.PerformanceMonitor
   m_EnableVehiclePerformanceMonitor: 1
+  m_Height: 20
 --- !u!4 &1067925907
 Transform:
   m_ObjectHideFlags: 0

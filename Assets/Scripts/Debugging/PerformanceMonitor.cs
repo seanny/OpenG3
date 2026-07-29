@@ -5,7 +5,7 @@ namespace GTA3Unity.Debugging
 {
     public sealed class PerformanceMonitor: MonoBehaviour
     {
-        public static Dictionary<string, double> VariablesToMonitor {get; private set;} = new();
+        public static Dictionary<string, object> VariablesToMonitor {get; private set;} = new();
         [SerializeField] private bool m_EnableVehiclePerformanceMonitor;
         [SerializeField] private float m_Height = 20;
 
@@ -19,6 +19,15 @@ namespace GTA3Unity.Debugging
             VariablesToMonitor[key] = value;
         }
 
+        public static void SetValue(string key, bool value)
+        {
+            if(!VariablesToMonitor.ContainsKey(key))
+            {
+                VariablesToMonitor.Add(key, value);
+                return;
+            }
+            VariablesToMonitor[key] = value;
+        }
 
         void OnGUI()
         {

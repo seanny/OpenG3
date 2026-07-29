@@ -152,20 +152,12 @@ namespace GTA3Unity.Vehicles
                 !Mathf.Approximately(requestedPedal, m_LastLoggedRequestedPedal);
             bool handBrakeChanged = handBrake != m_LastLoggedHandBrake;
 
-            if (m_EnableDiagnostics &&
-                (m_LogEveryInputSample || pedalChanged || handBrakeChanged))
+            if (pedalChanged || handBrakeChanged)
             {
-                Debug.Log(
-                    $"[CarAcceleration] Input received: frame={Time.frameCount}, " +
-                    $"componentId={GetInstanceID()}, initialized={m_IsInitialized}, " +
-                    $"active={gameObject.activeInHierarchy}, enabled={enabled}, " +
-                    $"move={input.move.ToString("R")}, rawPedal={rawPedal:R}, " +
-                    $"clampedPedal={requestedPedal:R}, handBrake={handBrake}, " +
-                    $"useAngularVelocity={m_UseAngularVelocity}",
-                    this);
-
                 m_LastLoggedRequestedPedal = requestedPedal;
                 m_LastLoggedHandBrake = handBrake;
+                PerformanceMonitor.SetValue("m_LastLoggedRequestedPedal", m_LastLoggedRequestedPedal);
+                PerformanceMonitor.SetValue("m_LastLoggedHandBrake", m_LastLoggedHandBrake);
             }
 
             // Input is sampled here and consumed from FixedUpdate. The input
@@ -219,17 +211,6 @@ namespace GTA3Unity.Vehicles
 
             float driveAcceleration = CalculateDriveAcceleration(forwardSpeed);
             ApplyWheelForces(vehicleForward, forwardSpeed, driveAcceleration);
-
-            if (IsPeriodicDiagnosticFrame)
-            {
-                LogMotionSnapshot(
-                    vehicleForward,
-                    forwardSpeed,
-                    linearForwardSpeed,
-                    linearVelocity,
-                    angularVelocity,
-                    driveAcceleration);
-            }
         }
 
         private void CalculatePedals(float forwardSpeed)
@@ -249,22 +230,6 @@ namespace GTA3Unity.Vehicles
             {
                 m_fGasPedal = 0.0f;
                 m_fBrakePedal = Mathf.Abs(m_RequestedPedal);
-            }
-
-            if (m_EnableDiagnostics &&
-                (directionChangeBraking != m_WasDirectionChangeBraking ||
-                 IsPeriodicDiagnosticFrame))
-            {
-                m_FixedUpdateCount = 0;
-                Debug.Log(
-                    $"[CarAcceleration] Pedal state: " +
-                    $"requested={m_RequestedPedal:R}, gas={m_fGasPedal:R}, " +
-                    $"brake={m_fBrakePedal:R}, handBrake={m_HandBrake}, " +
-                    $"forwardSpeed={forwardSpeed:R}, absoluteForwardSpeed={absoluteForwardSpeed:R}, " +
-                    $"directionChangeBraking={directionChangeBraking}, " +
-                    $"velocitySource={(m_UseAngularVelocity ? "angularVelocity" : "linearVelocity")}, " +
-                    $"selectedVelocity={m_MovementSpeed.ToString("R")}",
-                    this);
             }
 
             m_WasDirectionChangeBraking = directionChangeBraking;

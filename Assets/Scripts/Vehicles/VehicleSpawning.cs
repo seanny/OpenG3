@@ -46,10 +46,7 @@ namespace GTA3Unity.Vehicles
             if(string.Equals(ideCar.Type, "car", System.StringComparison.OrdinalIgnoreCase))
             {
                 definition.ModelIndex = ideCar.Id;
-                Debug.Log($"Added car '{definition.VehicleId}': {definition.HandlingId}, {definition.GameName}, {definition.VehicleClass}, {definition.Frequency}");
             }
-
-
             Vehicles.Add(definition);
         }
 
