@@ -8,7 +8,6 @@ namespace GTA3Unity.Core
         protected static readonly Vector3 s_ModelBasisPosition = new Vector3(0, 1.0f, 0.0f);
         private static readonly Quaternion s_ModelBasisRotation = Quaternion.Euler(-90.0f, 180.0f, 0.0f);
         public int ModelIndex;
-
         protected GameObject m_PedModel;
 
         public virtual void SetModel(int modelIndex)

@@ -4,16 +4,28 @@ using UnityEngine;
 
 namespace GTA3Unity.Vehicles
 {
+    public enum EVehicleState
+    {
+        Player, // Controlled by player using WheelCollider
+        AiSimple, // Controlled by AI not using WheelCollider
+        AiPhysics, // Controlled by AI using WheelCollider,
+        Abandoned, // Self-explanitory
+        Wrecked, // Vehicle is using wrecked model
+    }
+
     [RequireComponent(typeof(Rigidbody))]
     public abstract class Vehicle: GtaObject
     {
         public string VehicleIdentifier => m_VehicleIdentifier;
         public PedObject Driver => m_Driver;
         public HandlingData HandlingData => m_HandlingData;
+        public EVehicleState VehicleState => m_VehicleState;
 
         [SerializeField] private string m_VehicleIdentifier;
         [SerializeField] protected HandlingData m_HandlingData;
         [SerializeField] private PedObject m_Driver;
+        [SerializeField] private EVehicleState m_VehicleState;
+        [SerializeField] protected float m_VehicleHealth;
 
         protected Rigidbody m_RigidBody;
         private CharacterController m_DriverController;
@@ -23,6 +35,7 @@ namespace GTA3Unity.Vehicles
         {
             m_RigidBody = GetComponent<Rigidbody>();
             Debug.Assert(m_RigidBody != null);
+            m_VehicleHealth = 1000f;
         }
 
         public void SetVehicleIdentifier(string vehicleIdentifier)
@@ -57,6 +70,11 @@ namespace GTA3Unity.Vehicles
             {
                 meshColliders[i].enabled = false;
             }
+        }
+
+        public void SetState(EVehicleState vehicleState)
+        {
+            m_VehicleState = vehicleState;
         }
 
         public void SetDriver(PedObject ped)
@@ -132,5 +150,7 @@ namespace GTA3Unity.Vehicles
             spawnedModel.SetActive(true);
             return spawnedModel;
         }
+
+        public abstract void BlowUp();
     }
 }

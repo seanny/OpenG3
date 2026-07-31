@@ -14,3 +14,5 @@ LowerGearSpeedMultiplier 4.0
 BrakeForceMultiplier 4.0
 WheelGripMultiplier 2.0
 GameSpeedToMetersPerSecond 50.0
+VehicleShaderBurntMax 0.1
+VehicleBlowUpUpwardForce 10000

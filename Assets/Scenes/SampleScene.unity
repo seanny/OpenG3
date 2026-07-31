@@ -1888,6 +1888,8 @@ MonoBehaviour:
   ModelIndex: 0
   m_VehicleIdentifier: LANDSTAL
   m_Driver: {fileID: 0}
+  m_VehicleState: 0
+  m_VehicleHealth: 0
   m_CarAcceleration: {fileID: 0}
 --- !u!54 &532789614
 Rigidbody:
@@ -1948,10 +1950,6 @@ MonoBehaviour:
   m_fBrakePedal: 0
   m_CurrentGear: 1
   m_UseAngularVelocity: 0
-  m_EnableDiagnostics: 1
-  m_DiagnosticIntervalFrames: 10
-  m_LogWheelDiagnostics: 1
-  m_LogEveryInputSample: 0
 --- !u!1001 &571158234
 PrefabInstance:
   m_ObjectHideFlags: 0

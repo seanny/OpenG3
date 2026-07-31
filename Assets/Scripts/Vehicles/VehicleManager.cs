@@ -18,6 +18,8 @@ namespace GTA3Unity.Vehicles
         public float BrakeForceMultiplier;
         public float WheelGripMultiplier;
         public float GameSpeedToMetersPerSecond;
+        public float VehicleShaderBurntMax;
+        public float VehicleBlowUpUpwardForce;
     }
 
     public static class VehicleManager
@@ -111,6 +113,16 @@ namespace GTA3Unity.Vehicles
                         NumberStyles.Float,
                         CultureInfo.InvariantCulture,
                         out vehicleData.GameSpeedToMetersPerSecond),
+                    "VehicleShaderBurntMax" => float.TryParse(
+                        value,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out vehicleData.VehicleShaderBurntMax),
+                    "VehicleBlowUpUpwardForce" => float.TryParse(
+                        value,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out vehicleData.VehicleBlowUpUpwardForce),
                     _ => true
                 };
 

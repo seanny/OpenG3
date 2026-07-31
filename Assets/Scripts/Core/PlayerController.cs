@@ -239,9 +239,15 @@ namespace GTA3Unity.Core
                     {
                         return;
                     }
+                    // TODO: Need to replace these legacy Input calls with new InputSystem instead
                     if(Input.GetKeyUp(KeyCode.F))
                     {
                         ExitCar();
+                        return;
+                    }
+                    if(Input.GetKeyUp(KeyCode.B))
+                    {
+                        m_Vehicle.BlowUp();
                         return;
                     }
                     m_Vehicle.OnInput(_input);

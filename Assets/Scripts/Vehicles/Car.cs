@@ -31,6 +31,7 @@ namespace GTA3Unity.Vehicles
         private bool m_IsBus;
         private CarWheelSystem m_WheelSystem;
         private CarSteeringController m_SteeringController;
+        private List<MeshRenderer> m_Renderers = new();
 
         [SerializeField]
         private CarAcceleration m_CarAcceleration;
@@ -48,6 +49,24 @@ namespace GTA3Unity.Vehicles
             m_IsVan = m_HandlingData.Flags.HasFlag(EHandlingFlags.IsVan);
             m_IsBus = m_HandlingData.Flags.HasFlag(EHandlingFlags.IsBus);
             return true;
+        }
+
+        public override void SetModel(int modelIndex)
+        {
+            base.SetModel(modelIndex);
+
+            if(m_PedModel == null)
+            {
+                return;
+            }
+
+            // Vehicle bodies use WheelColliders for physics. Concave MeshColliders
+            // cannot be attached to their dynamic Rigidbody.
+            var renderers = m_PedModel.GetComponentsInChildren<MeshRenderer>();
+            foreach(var renderer in renderers)
+            {
+                m_Renderers.Add(renderer);
+            }
         }
 
         private void Awake()
@@ -324,6 +343,24 @@ namespace GTA3Unity.Vehicles
         public Vector3 GetSpeed(Vector3 offset)
         {
             return m_RigidBody.linearVelocity + Vector3.Cross(m_RigidBody.angularVelocity, offset);
+        }
+
+        public override void BlowUp()
+        {
+            m_RigidBody.AddForce(0, VehicleManager.VehicleData.VehicleBlowUpUpwardForce, 0, ForceMode.Impulse);
+            SetState(EVehicleState.Wrecked);
+            m_VehicleHealth = 0f;
+            foreach(var renderer in m_Renderers)
+            {
+                foreach(var material in renderer.materials)
+                {
+                    if(material.shader.name.Contains("SimpleBurnableLit"))
+                    {
+                        material.SetFloat("_Burnt", VehicleManager.VehicleData.VehicleShaderBurntMax);
+                    }
+                }
+            }
+            // TODO: detatch WheelCollider's from car
         }
     }
 }
