@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using GTA3Unity.Core;
+using System.Collections.Generic;
 
 namespace GTA3Unity.Vehicles
 {
@@ -43,8 +44,12 @@ namespace GTA3Unity.Vehicles
             GameObject model,
             HandlingData handlingData,
             bool isVan,
-            bool isBus)
+            bool isBus,
+            out Dictionary<EVehicleDoorIndex, GameObject> intact,
+            out Dictionary<EVehicleDoorIndex, GameObject> damaged)
         {
+            intact = new();
+            damaged = new();
             if (model == null)
             {
                 return;
@@ -70,10 +75,16 @@ namespace GTA3Unity.Vehicles
                     model.transform,
                     dummy.transform,
                     definition.IntactName,
-                    definition.DamagedName);
+                    definition.DamagedName,
+                    out GameObject intactDoor,
+                    out GameObject damagedDoor);
                 doorAnchor.transform.SetPositionAndRotation(
                     dummy.transform.position,
                     dummy.transform.rotation);
+                intactDoor.transform.SetParent(doorAnchor.transform, true);
+                damagedDoor.transform.SetParent(doorAnchor.transform, true);
+                intact.Add(definition.Index, intactDoor);
+                damaged.Add(definition.Index, damagedDoor);
             }
         }
 
@@ -100,89 +111,33 @@ namespace GTA3Unity.Vehicles
             bool isVan,
             bool isBus)
         {
-            switch (doorIndex)
-            {
-                case EVehicleDoorIndex.FrontLeft:
-                    door.OnStart(
-                        isBus ? -(Mathf.PI / 2.0f) : -(Mathf.PI / 0.4f),
-                        0.0f,
-                        0,
-                        2);
-                    break;
-
-                case EVehicleDoorIndex.FrontRight:
-                    door.OnStart(
-                        0.0f,
-                        isBus ? Mathf.PI / 2.0f : Mathf.PI / 0.4f,
-                        0,
-                        2);
-                    break;
-
-                case EVehicleDoorIndex.RearLeft:
-                    door.OnStart(
-                        isVan ? -(Mathf.PI / 2.0f) : -(Mathf.PI * 0.4f),
-                        0.0f,
-                        isVan ? 1 : 0,
-                        2);
-                    break;
-
-                case EVehicleDoorIndex.RearRight:
-                    door.OnStart(
-                        0.0f,
-                        isVan ? Mathf.PI / 2.0f : Mathf.PI * 0.4f,
-                        isVan ? 0 : 1,
-                        2);
-                    break;
-
-                case EVehicleDoorIndex.Bonnet:
-                    if (handlingFlags.HasFlag(EHandlingFlags.RevBonnet))
-                    {
-                        door.OnStart(-(Mathf.PI * 0.3f), 0.0f, 1, 0);
-                    }
-                    else
-                    {
-                        door.OnStart(0.0f, Mathf.PI * 0.3f, 1, 0);
-                    }
-                    break;
-
-                case EVehicleDoorIndex.Boot:
-                    if (handlingFlags.HasFlag(EHandlingFlags.HangingBoot))
-                    {
-                        door.OnStart(-(Mathf.PI * 0.4f), 0.0f, 0, 0);
-                    }
-                    else if (handlingFlags.HasFlag(EHandlingFlags.TailGateBoot))
-                    {
-                        door.OnStart(0.0f, Mathf.PI / 2.0f, 1, 0);
-                    }
-                    else
-                    {
-                        door.OnStart(-(Mathf.PI * 0.3f), 0.0f, 1, 0);
-                    }
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(doorIndex), doorIndex, null);
-            }
+            door.OnStart(doorIndex);
         }
 
         private void PlaceDoorMeshes(
             Transform modelRoot,
             Transform doorFrame,
             string intactName,
-            string damagedName)
+            string damagedName,
+            out GameObject intact,
+            out GameObject damaged)
         {
+            intact = null;
+            damaged = null;
             for (int childIndex = 0; childIndex < modelRoot.childCount; childIndex++)
             {
                 Transform child = modelRoot.GetChild(childIndex);
                 if (child.name.Equals(intactName, StringComparison.Ordinal))
                 {
                     child.SetPositionAndRotation(doorFrame.position, doorFrame.rotation);
+                    intact = child.gameObject;
                 }
 
                 if (child.name.Equals(damagedName, StringComparison.Ordinal))
                 {
                     child.SetPositionAndRotation(doorFrame.position, doorFrame.rotation);
                     child.gameObject.SetActive(false);
+                    damaged = child.gameObject;
                 }
             }
         }

@@ -16,3 +16,4 @@ WheelGripMultiplier 2.0
 GameSpeedToMetersPerSecond 50.0
 VehicleShaderBurntMax 0.1
 VehicleBlowUpUpwardForce 10000
+DoorOpenSpeed 90.0

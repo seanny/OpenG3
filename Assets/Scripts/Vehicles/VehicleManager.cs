@@ -20,6 +20,7 @@ namespace GTA3Unity.Vehicles
         public float GameSpeedToMetersPerSecond;
         public float VehicleShaderBurntMax;
         public float VehicleBlowUpUpwardForce;
+        public float DoorOpenSpeed;
     }
 
     public static class VehicleManager
@@ -123,6 +124,11 @@ namespace GTA3Unity.Vehicles
                         NumberStyles.Float,
                         CultureInfo.InvariantCulture,
                         out vehicleData.VehicleBlowUpUpwardForce),
+                    "DoorOpenSpeed" => float.TryParse(
+                        value,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out vehicleData.DoorOpenSpeed),
                     _ => true
                 };
 

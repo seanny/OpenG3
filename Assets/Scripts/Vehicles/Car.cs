@@ -25,6 +25,8 @@ namespace GTA3Unity.Vehicles
     /// </summary>
     public class Car : Vehicle
     {
+        public Dictionary<EVehicleDoorIndex, VehicleDoor> VehicleDoors => m_VehicleDoors;
+
         private int m_VehicleBodyLayer = -1;
         private bool m_IsInitialized;
         private bool m_IsVan;
@@ -32,6 +34,7 @@ namespace GTA3Unity.Vehicles
         private CarWheelSystem m_WheelSystem;
         private CarSteeringController m_SteeringController;
         private List<MeshRenderer> m_Renderers = new();
+        private Dictionary<EVehicleDoorIndex, VehicleDoor> m_VehicleDoors = new();
 
         [SerializeField]
         private CarAcceleration m_CarAcceleration;
@@ -196,7 +199,7 @@ namespace GTA3Unity.Vehicles
             }
 
             CarDoorAssembler doorAssembler = new();
-            doorAssembler.CreateDoors(m_PedModel, HandlingData, m_IsVan, m_IsBus);
+            doorAssembler.CreateDoors(m_PedModel, HandlingData, m_IsVan, m_IsBus, out var intactDoors, out var damagedDoors);
 
             ConfigureRigidbody();
 
@@ -215,6 +218,16 @@ namespace GTA3Unity.Vehicles
             m_SteeringController = new CarSteeringController(
                 m_WheelSystem.Wheels,
                 HandlingData.SteeringLock);
+            var vehicleDoors = GetComponentsInChildren<VehicleDoor>();
+            foreach(var vehicleDoor in vehicleDoors)
+            {
+                if(m_VehicleDoors.ContainsKey(vehicleDoor.VehicleDoorIndex))
+                {
+                    continue;
+                }
+
+                m_VehicleDoors.Add(vehicleDoor.VehicleDoorIndex, vehicleDoor);
+            }
             m_IsInitialized = true;
         }
 
@@ -360,7 +373,43 @@ namespace GTA3Unity.Vehicles
                     }
                 }
             }
-            // TODO: detatch WheelCollider's from car
+            UnparentWheels();
+            UnparentDoors();
+        }
+
+        private void UnparentDoors()
+        {
+            if (m_PedModel == null)
+            {
+                return;
+            }
+
+            var doors = m_PedModel.GetComponentsInChildren<GameObject>();
+            for (int i = 0; i < doors.Length; i++)
+            {
+                if(doors[i].name.StartsWith("door_"))
+                {
+                    doors[i].transform.SetParent(null);
+                }
+            }
+        }
+
+        private void UnparentWheels()
+        {
+            WheelCollider[] wheels = m_WheelSystem?.Wheels;
+            if (wheels == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < wheels.Length; i++)
+            {
+                WheelCollider wheel = wheels[i];
+                if (wheel != null)
+                {
+                    wheel.transform.SetParent(null);
+                }
+            }
         }
     }
 }

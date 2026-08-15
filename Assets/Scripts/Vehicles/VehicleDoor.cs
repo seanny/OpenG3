@@ -1,3 +1,6 @@
+using System;
+using GTA3Unity.Core;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace GTA3Unity.Vehicles
@@ -9,156 +12,201 @@ namespace GTA3Unity.Vehicles
         Swinging
     };
 
+    public enum EDoorSwingingState
+    {
+        None,
+        Opening,
+        Closing
+    }
+
+    public enum EDoorType
+    {
+        Bonnet,
+        Boot,
+        LeftDoor,
+        RightDoor
+    };
+
     public sealed class VehicleDoor: MonoBehaviour
     {
-        private static readonly Vector3 s_SpeedOffset = new Vector3(1.0f, 0.0f, 0.0f);
+        #region Properties
+        public EDoorState DoorState => m_DoorState;
+        public float Speed => m_Speed;
+        public bool IsDamaged => m_IsDamaged;
+        public EDoorSwingingState SwingingState => m_SwingingState;
+        public PedObject OpenedBy => m_OpenedBy;
+        public EVehicleDoorIndex VehicleDoorIndex => m_VehicleDoorIndex;
+        #endregion
 
-        public float MaxAngle;
-        public float MinAngle;
-        public int Direction;
-        public int Axis;
-        public EDoorState DoorState;
-        public float Angle;
-        public float PreviousAngle;
-        public float AngularVelocity;
-        public Vector3 Speed;
+        #region Events
+        public event Action OnDoorOpen;
+        public event Action<PedObject> OnPedDoorOpen;
+        #endregion
 
-        public float ClosedAngle
+        #region Fields
+        [SerializeField] private EDoorState m_DoorState = EDoorState.Closed;
+        [SerializeField] private Quaternion m_OpenRotation = Quaternion.identity;
+        [SerializeField] private float m_Speed = 90;
+        [SerializeField] private bool m_IsDamaged = false;
+        [SerializeField] private EDoorSwingingState m_SwingingState = EDoorSwingingState.None;
+        [SerializeField] private PedObject m_OpenedBy;
+        [SerializeField] private EVehicleDoorIndex m_VehicleDoorIndex;
+        [SerializeField] private MeshCollider m_MeshCollider;
+        #endregion
+
+        void Start()
         {
-            get
+            var meshFilter = GetComponentInChildren<MeshFilter>();
+            if(meshFilter == null)
             {
-                if(Mathf.Abs(MaxAngle) < Mathf.Abs(MinAngle))
-                {
-                    return MaxAngle;
-                }
-                else
-                {
-                    return MinAngle;
-                }
+                return;
+            }
+
+            m_MeshCollider = GetComponent<MeshCollider>();
+            if(m_MeshCollider == null)
+            {
+                m_MeshCollider = gameObject.AddComponent<MeshCollider>();
+            }
+            m_MeshCollider.convex = true;
+            m_MeshCollider.isTrigger = true;
+            m_MeshCollider.sharedMesh = meshFilter.mesh;
+
+
+            var rigidBody = GetComponent<Rigidbody>();
+            if(rigidBody == null)
+            {
+                rigidBody = gameObject.AddComponent<Rigidbody>();
+            }
+            rigidBody.isKinematic = true;
+        }
+
+        public void OnStart(EVehicleDoorIndex doorIndex)
+        {
+            // Get m_Speed value from vehicle_settings.dat
+            m_Speed = VehicleManager.VehicleData.DoorOpenSpeed;
+            m_VehicleDoorIndex = doorIndex;
+
+            // Assign correct open rotations based on door type
+            switch(doorIndex)
+            {
+                case EVehicleDoorIndex.Bonnet:
+                    m_OpenRotation = Quaternion.Euler(-45f, 0f, 0f);
+                    break;
+                case EVehicleDoorIndex.Boot:
+                    m_OpenRotation = Quaternion.Euler(45f, 0f, 0f);
+                    break;
+                case EVehicleDoorIndex.FrontLeft:
+                case EVehicleDoorIndex.RearLeft:
+                    m_OpenRotation = Quaternion.Euler(0f, 45f, 0f);
+                    break;
+                case EVehicleDoorIndex.FrontRight:
+                case EVehicleDoorIndex.RearRight:
+                    m_OpenRotation = Quaternion.Euler(0f, -45f, 0f);
+                    break;
             }
         }
 
-        public float OpenedAngle
+        /// <summary>
+        /// Set open or closed state
+        /// </summary>
+        /// <param name="opened"></param>
+        /// <param name="openedBy">Who opened/closed this door?</param>
+        public void SetOpened(bool opened, PedObject openedBy = null)
         {
-            get
+            if(opened)
             {
-                if(Mathf.Abs(MaxAngle) < Mathf.Abs(MinAngle))
-                {
-                    return MinAngle;
-                }
-                else
-                {
-                    return MaxAngle;
-                }
-            }
-        }
-
-        public float OpenRatioAngle
-        {
-            get
-            {
-                if(OpenedAngle == 0.0f)
-                {
-                    return 0.0f;
-                }
-                return Angle / OpenedAngle;
-            }
-        }
-
-        public bool IsOpen
-        {
-            get
-            {
-                if(Mathf.Abs(Angle) < Mathf.Abs(OpenedAngle) - 0.5f)
-                {
-                    return false;
-                }
-                return true;
-            }
-        }
-
-        public bool IsClosed
-        {
-            get
-            {
-                return Angle == ClosedAngle;
-            }
-        }
-
-        public void OnStart(float minAngle, float maxAngle, int direction, int axis)
-        {
-            MinAngle = minAngle;
-            MaxAngle = maxAngle;
-            Direction = direction;
-            Axis = axis;
-        }
-
-        public void Open(float ratio)
-        {
-            float open;
-            PreviousAngle = Angle;
-            open = OpenedAngle;
-            if(ratio < 1.0f)
-            {
-                Angle = open*ratio;
-                if(Angle == 0.0f)
-                {
-                    AngularVelocity = 0.0f;
-                }
+                m_SwingingState = EDoorSwingingState.Opening;
             }
             else
             {
-                DoorState = EDoorState.Open;
-                Angle = open;
+                m_SwingingState = EDoorSwingingState.Closing;
+            }
+            m_OpenedBy = openedBy;
+            m_DoorState = EDoorState.Swinging;
+        }
+
+        void Update()
+        {
+#if UNITY_EDITOR
+            // So I can test damage state in editor
+            EnsureDamaged(IsDamaged);
+#endif
+            if(m_SwingingState == EDoorSwingingState.Opening)
+            {
+                var targetRotation = m_OpenRotation;
+
+                transform.localRotation = Quaternion.RotateTowards(transform.localRotation, targetRotation, Speed * Time.deltaTime);
+                if(Quaternion.Angle(transform.localRotation, targetRotation) <= 0.01f)
+                {
+                    transform.localRotation = targetRotation;
+                    m_SwingingState = EDoorSwingingState.None;
+                    m_DoorState = EDoorState.Open;
+                    if(m_OpenedBy != null)
+                    {
+                        OnPedDoorOpen?.Invoke(m_OpenedBy);
+                    }
+                    else
+                    {
+                        OnDoorOpen?.Invoke();
+                    }
+                }
+            }
+            if(m_SwingingState == EDoorSwingingState.Closing)
+            {
+                var targetRotation = Quaternion.Euler(0, 0, 0);
+
+                transform.localRotation = Quaternion.RotateTowards(transform.localRotation, targetRotation, Speed * Time.deltaTime);
+                if(Quaternion.Angle(transform.localRotation, targetRotation) <= 0.01f)
+                {
+                    transform.localRotation = targetRotation;
+                    m_SwingingState = EDoorSwingingState.None;
+                    m_DoorState = EDoorState.Closed;
+                }
             }
         }
 
-        public void OnUpdate(Car car)
+        public void SetDamaged(bool damaged)
         {
-            Vector3 speed = car.GetSpeed(s_SpeedOffset);
-            Vector3 speedDifference = speed - Speed;
+            m_IsDamaged = damaged;
+            EnsureDamaged(damaged);
+        }
 
-            speedDifference = car.transform.InverseTransformDirection(speedDifference);
-
-            float speedDifferenceAlongDoor = 0.0f;
-            switch(Axis)
+        private void EnsureDamaged(bool damaged)
+        {
+            for(int i = 0; i < transform.childCount; i++)
             {
-                case 0:
-                    speedDifferenceAlongDoor = Direction != 0 ?
-                        speedDifference.y + speedDifference.z :
-                        -(speedDifference.y + speedDifference.z);
-                    break;
-                case 2:
-                    speedDifferenceAlongDoor = Direction != 0 ?
-                        -(speedDifference.y + speedDifference.x) :
-                        speedDifference.y - speedDifference.x;
-                    break;
+                var childObject = transform.GetChild(i);
+                if(childObject.name.EndsWith("_ok"))
+                {
+                    childObject.gameObject.SetActive(!damaged);
+                }
+                if(childObject.name.EndsWith("_dam"))
+                {
+                    childObject.gameObject.SetActive(damaged);
+                }
+            }
+        }
+
+        void OnTriggerEnter(Collider other)
+        {
+            Debug.Log($"VehicleDoor.OnTriggerEnter: {other.name}");
+            if(m_IsDamaged == true)
+            {
+                return;
             }
 
-            speedDifferenceAlongDoor = Mathf.Clamp(speedDifferenceAlongDoor, -0.2f, 0.2f);
-            if(Mathf.Abs(speedDifferenceAlongDoor) > 0.002f)
+            Vehicle parentVehicle = GetComponentInParent<Vehicle>();
+            Vehicle vehicle = other.GetComponentInParent<Vehicle>();
+            if(vehicle != null)
             {
-                AngularVelocity += speedDifferenceAlongDoor;
-            }
-            AngularVelocity *= 0.945f;
-            AngularVelocity = Mathf.Clamp(AngularVelocity, -0.3f, 0.3f);
+                Debug.Log($"VehicleDoor.OnTriggerEnter: VehicleId: {vehicle.VehicleIdentifier} ParentId: {parentVehicle.VehicleIdentifier} Vehicle is parent: {vehicle == parentVehicle}");
+                if(vehicle == parentVehicle)
+                {
+                    return;
+                }
 
-            Angle += AngularVelocity;
-            DoorState = EDoorState.Swinging;
-            if(Angle > MaxAngle)
-            {
-                Angle = MaxAngle;
-                AngularVelocity *= -0.8f;
-                DoorState = EDoorState.Open;
+                SetDamaged(true);
             }
-            if(Angle < MinAngle)
-            {
-                Angle = MinAngle;
-                AngularVelocity *= -0.8f;
-                DoorState = EDoorState.Closed;
-            }
-
-            Speed = speed;
         }
     }
 }
