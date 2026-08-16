@@ -17,6 +17,7 @@ namespace OpenG3.Vehicles
         public float LowerGearSpeedMultiplier;
         public float BrakeForceMultiplier;
         public float WheelGripMultiplier;
+        public float LateralGripAssist;
         public float GameSpeedToMetersPerSecond;
         public float VehicleShaderBurntMax;
         public float VehicleBlowUpUpwardForce;
@@ -111,6 +112,11 @@ namespace OpenG3.Vehicles
                         NumberStyles.Float,
                         CultureInfo.InvariantCulture,
                         out vehicleData.WheelGripMultiplier),
+                    "LateralGripAssist" => float.TryParse(
+                        value,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out vehicleData.LateralGripAssist),
                     "GameSpeedToMetersPerSecond" => float.TryParse(
                         value,
                         NumberStyles.Float,

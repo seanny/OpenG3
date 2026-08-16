@@ -17,6 +17,8 @@ namespace OpenG3.Vehicles
         private const float MinSuspensionDamper = 2_000.0f;
         private const float MaxSuspensionDamper = 5_000.0f;
         private const float WheelMass = 20.0f;
+        private const float ExtremumSlip = 0.3f;
+        private const float AsymptoteSlip = 0.6f;
 
         private static readonly Quaternion s_WheelColliderRotationCorrection =
             Quaternion.Euler(0.0f, 180.0f, 0.0f);
@@ -227,10 +229,12 @@ namespace OpenG3.Vehicles
         {
             return new WheelFrictionCurve
             {
-                extremumSlip = 0.4f,
+                // Keep the peak of the tire curve at a lower slip value so
+                // the car settles into a corner instead of skating first.
+                extremumSlip = ExtremumSlip,
                 extremumValue = 1.0f,
-                asymptoteSlip = 0.8f,
-                asymptoteValue = 0.9f,
+                asymptoteSlip = AsymptoteSlip,
+                asymptoteValue = 0.95f,
                 stiffness = stiffness
             };
         }

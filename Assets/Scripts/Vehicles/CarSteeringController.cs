@@ -8,8 +8,8 @@ namespace OpenG3.Vehicles
     internal sealed class CarSteeringController
     {
         private const int FrontWheelCount = 2;
-        private const float SteeringResponsePerFrame = 0.2f;
-        private const float OriginalFrameRate = 50.0f;
+        private const float SteeringResponsePerSecond = 14.0f;
+        private const float SteeringReturnPerSecond = 18.0f;
 
         private readonly WheelCollider[] m_Wheels;
         private readonly float m_SteeringLock;
@@ -34,14 +34,19 @@ namespace OpenG3.Vehicles
                 return;
             }
 
-            float steeringResponse = Mathf.Clamp01(
-                SteeringResponsePerFrame * fixedDeltaTime * OriginalFrameRate);
+            // GTA3 reaches the requested steering angle quickly and keeps a
+            // mostly linear relationship between stick input and wheel angle.
+            // Squaring the input makes small corrections feel unresponsive and
+            // gives the car a heavier, more simulation-like turn-in.
+            float responsePerSecond = Mathf.Abs(m_TargetInput) > Mathf.Abs(m_SmoothedInput)
+                ? SteeringResponsePerSecond
+                : SteeringReturnPerSecond;
+            m_SmoothedInput = Mathf.MoveTowards(
+                m_SmoothedInput,
+                m_TargetInput,
+                responsePerSecond * Mathf.Max(0.0f, fixedDeltaTime));
 
-            m_SmoothedInput += (m_TargetInput - m_SmoothedInput) * steeringResponse;
-            m_SmoothedInput = Mathf.Clamp(m_SmoothedInput, -1.0f, 1.0f);
-
-            float shapedInput = Mathf.Sign(m_SmoothedInput) * m_SmoothedInput * m_SmoothedInput;
-            float steeringAngle = m_SteeringLock * shapedInput;
+            float steeringAngle = m_SteeringLock * m_SmoothedInput;
 
             for (int wheelIndex = 0; wheelIndex < FrontWheelCount; wheelIndex++)
             {

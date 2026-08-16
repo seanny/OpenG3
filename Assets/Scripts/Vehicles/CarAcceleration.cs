@@ -360,6 +360,42 @@ namespace OpenG3.Vehicles
                 stopwatch.Stop();
                 PerformanceMonitor.SetValue("ApplyWheelForces", stopwatch.Elapsed.TotalMilliseconds);
             }
+
+            ApplyLateralGrip(vehicleForward, groundedWheelCount);
+        }
+
+        private void ApplyLateralGrip(Vector3 vehicleForward, int groundedWheelCount)
+        {
+            if (groundedWheelCount == 0)
+            {
+                return;
+            }
+
+            float gripAssist = Mathf.Max(0.0f, VehicleManager.VehicleData.LateralGripAssist);
+            if (gripAssist <= 0.0f)
+            {
+                return;
+            }
+
+            Vector3 vehicleUp = transform.up;
+            Vector3 horizontalForward = Vector3.ProjectOnPlane(vehicleForward, vehicleUp);
+            if (horizontalForward.sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
+            horizontalForward.Normalize();
+            Vector3 vehicleRight = Vector3.Cross(vehicleUp, horizontalForward).normalized;
+            float lateralSpeed = Vector3.Dot(m_RigidBody.linearVelocity, vehicleRight);
+
+            // WheelCollider friction still handles contact forces, but this
+            // gentle assist keeps the chassis from skating sideways between
+            // physics steps. It is deliberately velocity-based rather than a
+            // hard velocity assignment so ramps, impacts, and suspension remain
+            // fully physical.
+            m_RigidBody.AddForce(
+                -vehicleRight * lateralSpeed * gripAssist,
+                ForceMode.Acceleration);
         }
 
         private void LogMotionSnapshot(
