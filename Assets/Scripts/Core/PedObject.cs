@@ -14,12 +14,19 @@ namespace GTA3Unity.Core
     public class PedObject : GtaObject
     {
         public EPedState PedState => m_PedState;
+        public bool IsMissionPed => m_IsMissionPed;
 
         [SerializeField] protected EPedState m_PedState = EPedState.OnFoot;
+        [SerializeField] protected bool m_IsMissionPed = false;
 
         public void SetPedState(EPedState pedState)
         {
             m_PedState = pedState;
+        }
+
+        public void SetMissionPed(bool isMissionPed)
+        {
+            m_IsMissionPed = isMissionPed;
         }
 
         public bool PlayAnimation(

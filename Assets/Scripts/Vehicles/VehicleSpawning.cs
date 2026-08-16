@@ -1,7 +1,6 @@
+using System;
 using System.Collections.Generic;
-using System.Globalization;
-using GTA3Unity.Dat;
-using RenderWareIo.Structs.Ide;
+using GTA3Unity.Core;
 using UnityEngine;
 
 namespace OpenG3.Vehicles
@@ -32,6 +31,7 @@ namespace OpenG3.Vehicles
         }
 
         public static List<VehicleDefinition> Vehicles { get; private set; } = new();
+        public static Dictionary<Guid, Vehicle> SpawnedVehicles { get; private set; } = new();
 
         public static void AddVehicle(RenderWareIo.Structs.Ide.Car ideCar)
         {
@@ -83,7 +83,7 @@ namespace OpenG3.Vehicles
             int randIndex = 0;
             if (validDefinitions.Count > 1)
             {
-                randIndex = Random.Range(0, validDefinitions.Count);
+                randIndex = UnityEngine.Random.Range(0, validDefinitions.Count);
             }
 
             GameObject gameObject = new GameObject();
@@ -98,10 +98,74 @@ namespace OpenG3.Vehicles
                 Car car = gameObject.AddComponent<Car>();
                 car.SetVehicleIdentifier(validDefinitions[randIndex].HandlingId);
                 car.SetModel(validDefinitions[randIndex].ModelIndex);
-                //car.SetHandlingData(vehicle.VehicleIdentifier);
+                SpawnedVehicles.Add(Guid.NewGuid(), car);
                 return car;
             }
             return null;
+        }
+
+        /// <summary>
+        /// Removes all non-mission distant (distance from player >100m) or wrecked (destroyed > 60 seconds).
+        /// </summary>
+        /// <param name="player"></param>
+        /// <param name="deltaTime"></param>
+        public static void RemoveNonMissionDistantOrWreckedSpawnedVehicles(PlayerController player, float deltaTime)
+        {
+            List<Guid> vehiclesToRemove = new();
+            foreach(var vehicle in SpawnedVehicles)
+            {
+                if(vehicle.Value == null)
+                {
+                    continue;
+                }
+                Vehicle instance = vehicle.Value;
+                if(instance.Driver != null && instance.Driver.IsMissionPed == true) // Do a similar check on passengers once they're implemented
+                {
+                    // Prevent vehicles being driven by mission peds from being despawned
+                    continue;
+                }
+
+                if(instance.VehicleType == EVehicleType.Mission)
+                {
+                    // Prevent mission vehicles from being despawned
+                    continue;
+                }
+
+                float distance = Vector3.Distance(player.transform.position, instance.transform.position);
+                if(distance > 50.0f || instance.DeathTime >= 60f) // Despawn vehicles if we are more than 100m away or its been destroyed for 60+ seconds
+                {
+                    vehiclesToRemove.Add(vehicle.Key);
+                }
+            }
+            if(vehiclesToRemove.Count > 0)
+            {
+                foreach(var vehicleToRemove in vehiclesToRemove)
+                {
+                    GameObject.Destroy(SpawnedVehicles[vehicleToRemove].gameObject);
+                    SpawnedVehicles.Remove(vehicleToRemove);
+                }
+                Debug.Log($"Vehicles to remove: {vehiclesToRemove.Count}");
+            }
+        }
+
+        /// <summary>
+        /// Convert all mission vehicles into normal vehicles
+        /// </summary>
+        public static void ReleaseMissionVehicles()
+        {
+            foreach(var vehicle in SpawnedVehicles)
+            {
+                if(vehicle.Value == null)
+                {
+                    continue;
+                }
+                Vehicle instance = vehicle.Value;
+
+                if(instance.VehicleType == EVehicleType.Mission)
+                {
+                    instance.SetVehicleType(EVehicleType.Normal);
+                }
+            }
         }
     }
 }

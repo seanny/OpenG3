@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using GTA3Unity;
+using GTA3Unity.Core;
 using UnityEngine;
 using UnityEngine.VFX;
 
@@ -18,6 +20,8 @@ namespace OpenG3.Core
 
         [SerializeField] private VisualEffect m_FirePrefab;
         [SerializeField] private VisualEffect m_SmokePrefab;
+        
+        private List<VisualEffect> m_SpawnedVisualEffects = new();
 
         void Awake()
         {
@@ -35,9 +39,37 @@ namespace OpenG3.Core
             }
         }
 
+        void Update()
+        {
+            if(PlayerController.Instance == null)
+            {
+                return;
+            }
+
+            RemoveDistanceVisualEffects();
+        }
+
+        private void RemoveDistanceVisualEffects()
+        {
+            List<VisualEffect> visualEffectsToRemove = new();
+            foreach(var visualEffect in m_SpawnedVisualEffects)
+            {
+                float distance = Vector3.Distance(PlayerController.Instance.transform.position, visualEffect.transform.position);
+                if(distance > 50.0f)
+                {
+                    visualEffectsToRemove.Add(visualEffect);
+                }
+            }
+            foreach(var vfx in visualEffectsToRemove)
+            {
+                Destroy(vfx.gameObject);
+                m_SpawnedVisualEffects.Remove(vfx);
+            }
+        }
+
         public VisualEffect SpawnFire(Vector3 position)
         {
-            return SpawnVisualEffect(m_SmokePrefab, position, "flame1", "FireTexture");
+            return SpawnVisualEffect(m_FirePrefab, position, "flame1", "FireTexture");
         }
 
         public VisualEffect SpawnSmoke(Vector3 position)
@@ -53,6 +85,7 @@ namespace OpenG3.Core
                 Debug.LogError($"Unable to spawn {textureName} vfx");
                 return null;
             }
+            m_SpawnedVisualEffects.Add(vfxObject);
 
             var texture = FileLoader.Instance.GetFrontendTexture(textureName, "particle");
             if(texture == null)

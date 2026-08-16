@@ -16,6 +16,12 @@ namespace OpenG3.Vehicles
         Wrecked, // Vehicle is using wrecked model
     }
 
+    public enum EVehicleType
+    {
+        Normal,
+        Mission
+    }
+
     [RequireComponent(typeof(Rigidbody))]
     public abstract class Vehicle : GtaObject
     {
@@ -24,6 +30,8 @@ namespace OpenG3.Vehicles
         public HandlingData HandlingData => m_HandlingData;
         public EVehicleState VehicleState => m_VehicleState;
         public bool IsFlippedOver => m_IsFlippedOver;
+        public EVehicleType VehicleType => m_VehicleType;
+        public float DeathTime => m_DeathTime;
 
         [SerializeField] private string m_VehicleIdentifier;
         [SerializeField] protected HandlingData m_HandlingData;
@@ -31,6 +39,8 @@ namespace OpenG3.Vehicles
         [SerializeField] private EVehicleState m_VehicleState;
         [SerializeField] protected float m_VehicleHealth;
         [SerializeField] protected float DamageWhenFlipped = 40;
+        [SerializeField] protected EVehicleType m_VehicleType = EVehicleType.Normal;
+        [SerializeField] protected float m_DeathTime = 0f;
 
         protected VisualEffect m_FireVisualEffect;
         protected VisualEffect m_SmokeVisualEffect;
@@ -50,6 +60,7 @@ namespace OpenG3.Vehicles
         {
             if (m_VehicleState == EVehicleState.Wrecked)
             {
+                m_DeathTime += Time.deltaTime;
                 return;
             }
 
@@ -106,6 +117,11 @@ namespace OpenG3.Vehicles
                 float damage = VehicleManager.VehicleData.DamageOnFire * Time.deltaTime;
                 DamageVehicle(damage);
             }
+        }
+
+        public void SetVehicleType(EVehicleType vehicleType)
+        {
+            m_VehicleType = vehicleType;
         }
 
         public void SetVehicleIdentifier(string vehicleIdentifier)

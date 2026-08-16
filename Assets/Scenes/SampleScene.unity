@@ -1892,6 +1892,8 @@ MonoBehaviour:
   m_VehicleState: 0
   m_VehicleHealth: 0
   DamageWhenFlipped: 40
+  m_VehicleType: 0
+  m_DeathTime: 0
   m_CarAcceleration: {fileID: 0}
 --- !u!54 &532789614
 Rigidbody:
@@ -3026,6 +3028,7 @@ GameObject:
   - component: {fileID: 1131704189}
   - component: {fileID: 1131704190}
   - component: {fileID: 1131704191}
+  - component: {fileID: 1131704192}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -3127,6 +3130,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::OpenG3.Core.VfxManager
   m_FirePrefab: {fileID: 4483871930289545552, guid: 6f1c439ab58138545a191a1c5a652d26, type: 3}
   m_SmokePrefab: {fileID: 5744193715165421939, guid: e8dab5fa070d06e4288eeb93854272b9, type: 3}
+--- !u!114 &1131704192
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1131704185}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eb349b2ccd626f74f9661d81a8bf3c82, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OpenG3.Core.WorldManager
 --- !u!1 &1136849343
 GameObject:
   m_ObjectHideFlags: 0
@@ -4641,6 +4656,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GTA3Unity.Core.PlayerController
   ModelIndex: 0
   m_PedState: 0
+  m_IsMissionPed: 0
   MoveSpeed: 1
   SprintSpeed: 10
   RotationSmoothTime: 0.12
