@@ -31,26 +31,64 @@ namespace OpenG3.Vehicles
         }
 
         public static List<VehicleDefinition> Vehicles { get; private set; } = new();
-        public static Dictionary<int, Vehicle> SpawnedVehicles { get; private set; } = new();
-        private static int NextVehicleId = 0;
+        private static readonly Dictionary<int, Vehicle> s_SpawnedVehicles = new();
+        public static IReadOnlyDictionary<int, Vehicle> SpawnedVehicles => s_SpawnedVehicles;
+        private static int s_NextVehicleId = 0;
 
         private static int AllocateVehicleId()
         {
-            return NextVehicleId++;
+            return s_NextVehicleId++;
         }
 
-        internal static void RegisterSpawnedVehicle(Vehicle vehicle)
+        internal static bool RegisterSpawnedVehicle(Vehicle vehicle)
         {
-            if(vehicle == null)
+            if (vehicle == null || vehicle.VehicleRuntimeId >= 0)
             {
-                return;
+                return false;
             }
 
             int runtimeId = AllocateVehicleId();
-            if(vehicle.SetRuntimeId(runtimeId))
+            if (!vehicle.SetRuntimeId(runtimeId))
             {
-                SpawnedVehicles.Add(runtimeId, vehicle);
+                return false;
             }
+
+            s_SpawnedVehicles.Add(runtimeId, vehicle);
+            return true;
+        }
+
+        public static bool TryGetVehicle(int runtimeId, out Vehicle vehicle)
+        {
+            if (runtimeId < 0 || !s_SpawnedVehicles.TryGetValue(runtimeId, out vehicle))
+            {
+                vehicle = null;
+                return false;
+            }
+
+            if (vehicle == null)
+            {
+                s_SpawnedVehicles.Remove(runtimeId);
+                vehicle = null;
+                return false;
+            }
+
+            return true;
+        }
+
+        internal static bool UnregisterSpawnedVehicle(Vehicle vehicle)
+        {
+            if (ReferenceEquals(vehicle, null) || vehicle.VehicleRuntimeId < 0)
+            {
+                return false;
+            }
+
+            if (!s_SpawnedVehicles.TryGetValue(vehicle.VehicleRuntimeId, out Vehicle registeredVehicle) ||
+                !ReferenceEquals(registeredVehicle, vehicle))
+            {
+                return false;
+            }
+
+            return s_SpawnedVehicles.Remove(vehicle.VehicleRuntimeId);
         }
 
         public static void AddVehicle(RenderWareIo.Structs.Ide.Car ideCar)
@@ -118,7 +156,12 @@ namespace OpenG3.Vehicles
                 Car car = gameObject.AddComponent<Car>();
                 car.SetVehicleIdentifier(validDefinitions[randIndex].HandlingId);
                 car.SetModel(validDefinitions[randIndex].ModelIndex);
-                RegisterSpawnedVehicle(car);
+                if (!RegisterSpawnedVehicle(car))
+                {
+                    Debug.LogError($"SpawnRandomVehicle: Failed to register '{car.name}'.", car);
+                    GameObject.Destroy(gameObject);
+                    return null;
+                }
                 return car;
             }
             return null;
@@ -132,10 +175,11 @@ namespace OpenG3.Vehicles
         public static void RemoveNonMissionDistantOrWreckedSpawnedVehicles(PlayerController player, float deltaTime)
         {
             List<int> vehiclesToRemove = new();
-            foreach(var vehicle in SpawnedVehicles)
+            foreach (var vehicle in s_SpawnedVehicles)
             {
-                if(vehicle.Value == null)
+                if (vehicle.Value == null)
                 {
+                    vehiclesToRemove.Add(vehicle.Key);
                     continue;
                 }
                 Vehicle instance = vehicle.Value;
@@ -157,12 +201,20 @@ namespace OpenG3.Vehicles
                     vehiclesToRemove.Add(vehicle.Key);
                 }
             }
-            if(vehiclesToRemove.Count > 0)
+            if (vehiclesToRemove.Count > 0)
             {
-                foreach(var vehicleToRemove in vehiclesToRemove)
+                foreach (var vehicleToRemove in vehiclesToRemove)
                 {
-                    GameObject.Destroy(SpawnedVehicles[vehicleToRemove].gameObject);
-                    SpawnedVehicles.Remove(vehicleToRemove);
+                    if (!s_SpawnedVehicles.TryGetValue(vehicleToRemove, out Vehicle vehicle))
+                    {
+                        continue;
+                    }
+
+                    UnregisterSpawnedVehicle(vehicle);
+                    if (vehicle != null)
+                    {
+                        GameObject.Destroy(vehicle.gameObject);
+                    }
                 }
                 Debug.Log($"Vehicles to remove: {vehiclesToRemove.Count}");
             }
@@ -173,7 +225,7 @@ namespace OpenG3.Vehicles
         /// </summary>
         public static void ReleaseMissionVehicles()
         {
-            foreach(var vehicle in SpawnedVehicles)
+            foreach (var vehicle in s_SpawnedVehicles)
             {
                 if(vehicle.Value == null)
                 {

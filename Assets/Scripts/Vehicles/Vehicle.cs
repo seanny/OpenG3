@@ -69,12 +69,9 @@ namespace OpenG3.Vehicles
             m_VehicleHealth = 1000f;
         }
 
-        void OnDestroy()
+        private void OnDestroy()
         {
-            if(VehicleSpawning.SpawnedVehicles.ContainsKey(m_VehicleRuntimeId))
-            {
-                VehicleSpawning.SpawnedVehicles.Remove(m_VehicleRuntimeId);
-            }
+            VehicleSpawning.UnregisterSpawnedVehicle(this);
         }
 
         protected virtual void Update()

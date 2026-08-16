@@ -27,7 +27,7 @@ The goal is **not** to reproduce every detail of the original vehicle implementa
 * [ ] **[P1]** Support remotely controlled vehicles such as the RC Bandit.
 * [X] **[P0]** Give every spawned vehicle a stable runtime identifier.
 * [ ] **[P0]** Allow mission/script systems to retain references to vehicles.
-* [ ] **[P0]** Detect references to vehicles that have been destroyed or despawned.
+* [X] **[P0]** Detect references to vehicles that have been destroyed or despawned.
 * [ ] **[P0]** Define basic vehicle states such as:
 
   * Player controlled
