@@ -23,16 +23,18 @@ namespace GTA3Unity.Vehicles
         public PedObject Driver => m_Driver;
         public HandlingData HandlingData => m_HandlingData;
         public EVehicleState VehicleState => m_VehicleState;
+        public bool IsFlippedOver => m_IsFlippedOver;
 
         [SerializeField] private string m_VehicleIdentifier;
         [SerializeField] protected HandlingData m_HandlingData;
         [SerializeField] private PedObject m_Driver;
         [SerializeField] private EVehicleState m_VehicleState;
         [SerializeField] protected float m_VehicleHealth;
-        [SerializeField] protected float DamageWhenOnFire = 50;
+        [SerializeField] protected float DamageWhenFlipped = 40;
 
         protected VisualEffect m_VisualEffect;
         protected Rigidbody m_RigidBody;
+        private bool m_IsFlippedOver;
         private CharacterController m_DriverController;
         private bool m_DriverControllerWasEnabled;
 
@@ -45,6 +47,14 @@ namespace GTA3Unity.Vehicles
 
         protected virtual void Update()
         {
+            m_IsFlippedOver = transform.up.y < 0f;
+
+            if(m_IsFlippedOver && m_VehicleHealth > 250)
+            {
+                float damage = VehicleManager.VehicleData.DamageWhenFlipped * Time.deltaTime;
+                DamageVehicle(damage);
+            }
+
             if(m_VehicleHealth <= 250 && m_VehicleHealth > 0f)
             {
                 // Spawn fire VFX on car.

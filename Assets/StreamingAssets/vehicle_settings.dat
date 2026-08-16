@@ -15,6 +15,7 @@ BrakeForceMultiplier 4.0
 WheelGripMultiplier 2.0
 GameSpeedToMetersPerSecond 50.0
 VehicleShaderBurntMax 0.1
-VehicleBlowUpUpwardForce 10000
+VehicleBlowUpUpwardForce 5000
 DoorOpenSpeed 90.0
 DamageOnFire 50.0
+DamageWhenFlipped 100.0
