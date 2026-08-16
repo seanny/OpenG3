@@ -408,7 +408,6 @@ namespace OpenG3.Vehicles
             {
                 door.transform.SetParent(null);
                 door.SetDamaged(true);
-                // FIXME: doors seem to go through the ground.
                 var rigidBody = door.GetComponent<Rigidbody>();
                 if(rigidBody != null)
                 {
@@ -418,7 +417,7 @@ namespace OpenG3.Vehicles
                 if(meshCollider != null)
                 {
                     meshCollider.isTrigger = false;
-                    meshCollider.convex = false;
+                    meshCollider.convex = true;
                 }
             }
         }
