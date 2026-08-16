@@ -26,34 +26,38 @@ This status is based on the current source. "Completed" means that the code path
   - Wheel visual models follow the collider poses, and smoothed steering input is applied to the two front wheels.
 
 - **Basic player driving**
-  - The player can find the nearest `Vehicle` with `F`, become its driver, and forward movement and handbrake input while in the driving state.
+  - The player can find the nearest `Vehicle` with `F`, become its driver, forward throttle/steering/handbrake input, and leave with `F`.
   - `CarAcceleration` implements a baseline for throttle, direction-change braking, forward/reverse selection, automatic gear changes, drive-type selection, engine acceleration, service brakes, and handbrake torque.
 
 - **Door/model assembly**
   - Known bonnet, boot, and door dummy frames are detected.
-  - `CarDoorAssembler` creates `VehicleDoor` components, applies the van/bus and bonnet/boot flag setup, places intact meshes, and hides the damaged mesh variants.
+  - `CarDoorAssembler` creates `VehicleDoor` components, assigns bonnet/boot/side-door rotations, places intact meshes, and hides the damaged mesh variants.
 
 - **Manual test setup**
   - `SampleScene` and `TestScene` contain manually placed `LANDSTAL` `Car` objects with rigidbodies and `CarAcceleration` components.
 
 ## Work in progress
 
-- **Runtime car integration is incomplete.** A `Car` can be placed in a scene and initialised, but the world loader only spawns `IdeObj` instances. It does not turn car IDE records or IPL instances into `Car` objects, so cars are not populated into the game world automatically.
+- **Runtime car integration is incomplete.** A `Car` can be placed in a scene or created through the debug/random spawn helper and initialised, but the world loader only spawns `IdeObj` instances. It does not turn car IDE records or IPL instances into `Car` objects, so cars are not populated into the game world automatically.
 
 - **Driving needs runtime validation and handling tuning.** The current propulsion is a Unity `WheelCollider` approximation. It has no vehicle-specific test coverage, and the wheel-frame direction/sign, grip, suspension, acceleration, gear thresholds, and braking values still need in-game validation against GTA III behaviour.
 
-- **Driver lifecycle is only partially implemented.** Entry is present, but there is no player exit path that calls `ClearDriver`, restores the player to an appropriate exit position, or returns the player to the on-foot state. `SeatOffsetDistance` is parsed but not used; the driver is teleported to the vehicle root rather than a defined seat position.
+- **Driver lifecycle is only partially implemented.** Entry and a basic player exit path are present; exit calls `ClearDriver`, restores the character controller, and returns the player to the on-foot state. Exit placement is only a teleport above the vehicle, with no door/space checks or camera transition. `SeatOffsetDistance` is parsed but not used, and the driver is teleported to the vehicle root rather than a defined seat position.
 
-- **Door runtime behaviour is not wired.** `VehicleDoor.OnUpdate` and `VehicleDoor.Open` have no callers. Door angles are not applied to the door transform, there is no player door-open/close interaction, and the damaged meshes are never swapped in. The current code assembles the parts but does not provide visible working door animation.
+- **Door runtime behaviour is not wired to player entry/exit.** `VehicleDoor.SetOpened` can animate the assembled door and `SetDamaged` swaps intact/damaged meshes, but there are no entry/exit callers. There is no door accessibility check, player door-open/close interaction, or full damaged-component system.
 
-- **Several parsed values have no runtime consumer yet.** This includes `PercentSubmerged`, `CollisionDamageMultiplier`, `SeatOffsetDistance`, `FrontLights`, `RearLights`, the unused handling flags (such as `NoDoors`, `HasNoRoof`, and `DoubleExhaust`), and car IDE metadata such as frequency, level, and the IDE LOD model.
+- **Several parsed values have no runtime consumer yet.** This includes `PercentSubmerged`, `SeatOffsetDistance`, `FrontLights`, `RearLights`, the unused handling flags (such as `NoDoors`, `HasNoRoof`, and `DoubleExhaust`), and car IDE metadata such as level, animation group, and the IDE LOD model. `Frequency` and vehicle class are stored for spawning, but are not yet used by a traffic population system.
+
+- **Damage and destruction are only a baseline.** Vehicles have health, collision/flip/fire damage, smoke/fire effects, a burn-down timer, a blow-up path, damaged door meshes, and wreck cleanup timing. Bullet/melee/explosion damage sources, proof flags, public health accessors, explosion area effects, occupant handling, engine lockout, and proper wreck entry rules are not implemented.
+
+- **Spawning and cleanup are only helpers.** IDE cars are registered, a random debug spawn returns a `Car`, and distant/wrecked non-mission spawned vehicles can be removed while mission-owned vehicles are protected. There is no ambient traffic population, parked-car generator system, stable vehicle-owned script handle, passenger-aware cleanup, or explicit protection for the player's current vehicle.
 
 ## Not started
 
 - Vehicle types other than `Car` (`boat`, `bike`, `train`, `plane`, and `helicopter`). `Car` is currently the only `Vehicle` implementation.
-- Vehicle population, parked cars, ambient traffic, traffic AI/path following, NPC drivers, police/mission vehicle control, and vehicle streaming/cleanup.
+- Ambient vehicle population, parked-car generators, traffic AI/path following, NPC drivers, police/mission vehicle control, and the complete streaming/cleanup lifecycle.
 - Passenger seats, passenger entry, NPC occupants, and seat/door selection.
-- Vehicle health, collision damage, deformation, fire/explosion states, destruction, repair, and the full damaged-model system.
+- Vehicle colours (`carcols.dat`), colour randomisation, and script colour overrides.
 - Headlights, brake/reverse lights, indicators, sirens, horns, exhaust effects, and other vehicle visual effects. The model converter recognises some related dummy names, but no runtime system drives them.
 - Engine, transmission, tyre, collision, and other vehicle audio.
 - Water buoyancy, submergence/floating behaviour, and vehicle recovery from water or rollovers.
