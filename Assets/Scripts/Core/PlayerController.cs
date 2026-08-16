@@ -7,6 +7,7 @@ using System.Collections;
 using GTA3Unity.Vehicles;
 using System;
 using Unity.VisualScripting;
+using OpenG3.Core;
 
 /* Note: animations are called via the controller for both the character and capsule using animator null checks
  */
@@ -265,6 +266,10 @@ namespace GTA3Unity.Core
                 // Temp debug spawn random vehicle
                 EVehicleClass vehicleClass = (EVehicleClass)UnityEngine.Random.Range(0, (int)EVehicleClass.TotalVehicleClasses);
                 VehicleSpawning.SpawnRandomVehicle(vehicleClass, transform.position);
+            }
+            if(Input.GetKeyUp(KeyCode.Alpha1))
+            {
+                VfxManager.Instance.SpawnVisualEffect(EVfxType.Fire, transform.position);
             }
             if(Input.GetKeyUp(KeyCode.F))
             {

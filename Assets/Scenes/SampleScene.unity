@@ -1891,6 +1891,7 @@ MonoBehaviour:
   m_Driver: {fileID: 0}
   m_VehicleState: 0
   m_VehicleHealth: 0
+  DamageWhenOnFire: 3
   m_CarAcceleration: {fileID: 0}
 --- !u!54 &532789614
 Rigidbody:
@@ -3024,6 +3025,7 @@ GameObject:
   - component: {fileID: 1131704186}
   - component: {fileID: 1131704189}
   - component: {fileID: 1131704190}
+  - component: {fileID: 1131704191}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -3111,6 +3113,19 @@ MonoBehaviour:
   m_StartupScreen: {fileID: 486341317}
   m_GtaDirectoryInputField: {fileID: 206305917}
   m_ErrorText: {fileID: 925400206}
+--- !u!114 &1131704191
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1131704185}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c4c17098eefde94895ef23a96e0644e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OpenG3.Core.VfxManager
+  m_FirePrefab: {fileID: 4483871930289545552, guid: 6f1c439ab58138545a191a1c5a652d26, type: 3}
 --- !u!1 &1136849343
 GameObject:
   m_ObjectHideFlags: 0

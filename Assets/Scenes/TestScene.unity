@@ -2511,6 +2511,7 @@ MonoBehaviour:
   m_Driver: {fileID: 0}
   m_VehicleState: 0
   m_VehicleHealth: 0
+  DamageWhenOnFire: 50
   m_CarAcceleration: {fileID: 0}
 --- !u!65 &1516343331
 BoxCollider:

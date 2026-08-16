@@ -258,9 +258,13 @@ namespace GTA3Unity
         {
             Debug.Assert(m_TxdMaterialCache != null);
 
+            if(m_TxdMaterialCache.Textures.ContainsKey($"{txdFile}/{textureName}"))
+            {
+                return m_TxdMaterialCache.Textures[$"{txdFile}/{textureName}"];;
+            }
+
             // Frontend textures
-            m_TxdMaterialCache.LoadTexture(txdFile, textureName, out string _);
-            return m_TxdMaterialCache.Textures[$"{txdFile}/{textureName}"];
+            return m_TxdMaterialCache.LoadTexture(txdFile, textureName, out string _);
         }
 
         public void PreInit()
@@ -314,6 +318,7 @@ namespace GTA3Unity
         {
             // This is hardcoded for now as there only ever is the 1 gta3.img file
             m_MainImg = new ImgFile(Path.Combine(GameManager.Instance.GtaDirectory, "models", "gta3.img"));
+            //
         }
 
         private void RegisterEarlyTxds()
@@ -321,6 +326,7 @@ namespace GTA3Unity
             m_TxdMaterialCache.RegisterLooseTxdDirectory(Path.Combine(GameManager.Instance.GtaDirectory, "models"));
             m_TxdMaterialCache.RegisterTxdFile("generic", Path.Combine(GameManager.Instance.GtaDirectory, "models", "generic.txd"));
             m_TxdMaterialCache.RegisterTxdFile("menu", Path.Combine(GameManager.Instance.GtaDirectory, "models", "menu.txd"));
+            m_TxdMaterialCache.RegisterTxdFile("particle", Path.Combine(GameManager.Instance.GtaDirectory, "models", "particle.txd"));
         }
 
         private void InitTxdCache()

@@ -495,6 +495,7 @@ namespace GTA3Unity.Utility
                 return null;
             }
 
+            // FIXME: Texture 'particle/explo01' has unsupported format 'UNKNOWN' depth 8, data size 252645135
             try
             {
                 if (TryDecodePalettedTexture(textureKey, data, out Texture2D palettedTexture))

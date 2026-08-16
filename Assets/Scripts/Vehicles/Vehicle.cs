@@ -1,4 +1,5 @@
 using GTA3Unity.Core;
+using RenderWareIo.Structs.Col;
 using StarterAssets;
 using UnityEngine;
 
@@ -26,6 +27,7 @@ namespace GTA3Unity.Vehicles
         [SerializeField] private PedObject m_Driver;
         [SerializeField] private EVehicleState m_VehicleState;
         [SerializeField] protected float m_VehicleHealth;
+        [SerializeField] protected float DamageWhenOnFire = 50;
 
         protected Rigidbody m_RigidBody;
         private CharacterController m_DriverController;
@@ -36,6 +38,17 @@ namespace GTA3Unity.Vehicles
             m_RigidBody = GetComponent<Rigidbody>();
             Debug.Assert(m_RigidBody != null);
             m_VehicleHealth = 1000f;
+        }
+
+        protected virtual void Update()
+        {
+            if(m_VehicleHealth <= 250)
+            {
+                // Spawn fire VFX on car.
+
+                float damage = VehicleManager.VehicleData.DamageOnFire * Time.deltaTime; // Not sure how gta3 did vehicle damage, gonna do this for now
+                DamageVehicle(damage);
+            }
         }
 
         public void SetVehicleIdentifier(string vehicleIdentifier)
@@ -152,5 +165,50 @@ namespace GTA3Unity.Vehicles
         }
 
         public abstract void BlowUp();
+
+        public virtual void DamageVehicle(float damage)
+        {
+            if(m_VehicleHealth <= 0f)
+            {
+                return;
+            }
+
+            m_VehicleHealth -= damage;
+        }
+
+        void OnCollisionEnter(Collision collision)
+        {
+            if(m_VehicleHealth <= 0f)
+            {
+                return;
+            }
+
+            float impulse = collision.impulse.magnitude / 50f; // gta3 units appears to be closest to: unity collision impulse magnitude / 50f
+
+            if(impulse <= 25f)
+            {
+                // If impulse is less than 25, no damage is applied
+                return;
+            }
+
+
+            float damage = (impulse - 25f) * HandlingData.CollisionDamageMultiplier * 0.6f;            
+            if(m_Driver != null && m_Driver is PlayerController)
+            {
+                damage /= 2f;
+            }
+            else
+            {
+                damage /= 4f;
+            }
+            Debug.Log(  $"Vehicle: {name}\n" +
+                        $"Damage: {damage}\n" +
+                        $"Magnitude: {collision.impulse.magnitude}\n" +
+                        $"SqrMagnitude: {collision.impulse.sqrMagnitude}\n" +
+                        $"Impulse: {impulse}\n" +
+                        $"HandlingData.CollisionDamageMultiplier: {HandlingData.CollisionDamageMultiplier}");
+
+            DamageVehicle(damage);
+        }
     }
 }
