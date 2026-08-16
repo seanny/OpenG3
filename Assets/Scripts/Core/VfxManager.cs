@@ -52,7 +52,7 @@ namespace OpenG3.Core
                 return null;
             }
 
-            var texture = FileLoader.Instance.GetFrontendTexture("explo01", "particle");
+            var texture = FileLoader.Instance.GetFrontendTexture("flame1", "particle");
             if(texture == null)
             {
                 Debug.LogError($"Cannot set texture: particle.txd does not contain flame1");

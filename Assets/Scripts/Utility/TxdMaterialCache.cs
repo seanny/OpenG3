@@ -495,7 +495,6 @@ namespace GTA3Unity.Utility
                 return null;
             }
 
-            // FIXME: Texture 'particle/explo01' has unsupported format 'UNKNOWN' depth 8, data size 252645135
             try
             {
                 if (TryDecodePalettedTexture(textureKey, data, out Texture2D palettedTexture))
@@ -554,12 +553,14 @@ namespace GTA3Unity.Utility
 
             if (data.Depth == 8)
             {
-                if (data.Pallette.Length < 256 * 4 ||
+                if (data.Pallette.Length == 0 ||
+                    data.Pallette.Length % 4 != 0 ||
                     data.Data.Length != pixelCount)
                 {
                     return false;
                 }
 
+                int paletteColorCount = data.Pallette.Length / 4;
                 Color32[] colors = new Color32[pixelCount];
 
                 for (int y = 0; y < data.Height; y++)
@@ -568,8 +569,14 @@ namespace GTA3Unity.Utility
                     {
                         int sourceIndex = x + (data.Width * y);
                         int targetIndex = x + (data.Width * (data.Height - y - 1));
+                        int paletteIndex = data.Data[sourceIndex];
 
-                        colors[targetIndex] = ReadPaletteColor(data.Pallette, data.Data[sourceIndex]);
+                        if (paletteIndex >= paletteColorCount)
+                        {
+                            return false;
+                        }
+
+                        colors[targetIndex] = ReadPaletteColor(data.Pallette, paletteIndex);
                     }
                 }
 

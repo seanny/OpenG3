@@ -107,15 +107,23 @@ namespace RenderWareIo.Structs.Txd
                 this.TexCodeType = RenderWareFileHelper.ReadByte(stream);
                 this.Flags = RenderWareFileHelper.ReadByte(stream);
 
-                this.Pallette = new byte[GetPaletteByteCount()];
+                long paletteStart = stream.Position;
+                this.Pallette = new byte[GetPaletteByteCount(dataEnd, paletteStart)];
                 for (int i = 0; i < this.Pallette.Length; i++)
                 {
                     this.Pallette[i] = RenderWareFileHelper.ReadByte(stream);
                 }
 
                 this.DataSize = RenderWareFileHelper.ReadUint32(stream);
-                this.Data = new byte[this.DataSize];
-                int bytesRead = stream.Read(this.Data, 0, (int)this.DataSize);
+                if (this.DataSize > int.MaxValue ||
+                    this.DataSize > dataEnd - stream.Position)
+                {
+                    throw new IOException(
+                        $"Texture data size {this.DataSize} exceeds the texture chunk bounds.");
+                }
+
+                this.Data = new byte[(int)this.DataSize];
+                int bytesRead = stream.Read(this.Data, 0, this.Data.Length);
 
                 if (bytesRead != this.Data.Length)
                 {
@@ -139,6 +147,41 @@ namespace RenderWareIo.Structs.Txd
 
         private int GetPaletteByteCount()
         {
+            return this.Pallette?.Length ?? 0;
+        }
+
+        private int GetPaletteByteCount(long dataEnd, long paletteStart)
+        {
+            if (this.Depth != 4 && this.Depth != 8)
+            {
+                return 0;
+            }
+
+            long imageDataSize = GetImageDataSize(
+                this.Width,
+                this.Height,
+                this.Depth,
+                this.TextureFormat);
+            long mipMapByteCount = GetMipMapByteCount();
+
+            if (imageDataSize >= 0 && mipMapByteCount >= 0)
+            {
+                long dataSizePosition = dataEnd - 4 - imageDataSize - mipMapByteCount;
+                long paletteByteCount = dataSizePosition - paletteStart;
+
+                if (paletteByteCount >= 0 &&
+                    paletteByteCount <= int.MaxValue &&
+                    paletteByteCount % 4 == 0)
+                {
+                    return (int)paletteByteCount;
+                }
+            }
+
+            return GetDefaultPaletteByteCount();
+        }
+
+        private int GetDefaultPaletteByteCount()
+        {
             if (this.Depth == 8)
             {
                 return 256 * 4;
@@ -150,6 +193,78 @@ namespace RenderWareIo.Structs.Txd
             }
 
             return 0;
+        }
+
+        private long GetMipMapByteCount()
+        {
+            long byteCount = 0;
+            int width = this.Width;
+            int height = this.Height;
+
+            for (int mipMapIndex = 1; mipMapIndex < this.MipMapCount; mipMapIndex++)
+            {
+                width = Math.Max(1, width / 2);
+                height = Math.Max(1, height / 2);
+
+                long mipMapDataSize = GetImageDataSize(
+                    width,
+                    height,
+                    this.Depth,
+                    this.TextureFormat);
+
+                if (mipMapDataSize < 0)
+                {
+                    return -1;
+                }
+
+                byteCount += 4 + mipMapDataSize;
+            }
+
+            return byteCount;
+        }
+
+        private static long GetImageDataSize(
+            int width,
+            int height,
+            byte depth,
+            uint textureFormat)
+        {
+            long blockWidth = Math.Max(1, (width + 3) / 4);
+            long blockHeight = Math.Max(1, (height + 3) / 4);
+
+            if (textureFormat == FourCc("DXT1"))
+            {
+                return blockWidth * blockHeight * 8;
+            }
+
+            if (textureFormat == FourCc("DXT3") ||
+                textureFormat == FourCc("DXT5"))
+            {
+                return blockWidth * blockHeight * 16;
+            }
+
+            long pixelCount = (long)width * height;
+
+            switch (depth)
+            {
+                case 4:
+                    return (pixelCount + 1) / 2;
+                case 8:
+                    return pixelCount;
+                case 16:
+                    return pixelCount * 2;
+                case 24:
+                    return pixelCount * 3;
+                case 32:
+                    return pixelCount * 4;
+                default:
+                    return -1;
+            }
+        }
+
+        private static uint FourCc(string value)
+        {
+            return BitConverter.ToUInt32(Encoding.ASCII.GetBytes(value), 0);
         }
 
         public void Write(Stream stream)

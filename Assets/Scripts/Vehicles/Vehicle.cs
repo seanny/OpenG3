@@ -1,7 +1,9 @@
 using GTA3Unity.Core;
+using OpenG3.Core;
 using RenderWareIo.Structs.Col;
 using StarterAssets;
 using UnityEngine;
+using UnityEngine.VFX;
 
 namespace GTA3Unity.Vehicles
 {
@@ -29,6 +31,7 @@ namespace GTA3Unity.Vehicles
         [SerializeField] protected float m_VehicleHealth;
         [SerializeField] protected float DamageWhenOnFire = 50;
 
+        protected VisualEffect m_VisualEffect;
         protected Rigidbody m_RigidBody;
         private CharacterController m_DriverController;
         private bool m_DriverControllerWasEnabled;
@@ -42,12 +45,31 @@ namespace GTA3Unity.Vehicles
 
         protected virtual void Update()
         {
-            if(m_VehicleHealth <= 250)
+            if(m_VehicleHealth <= 250 && m_VehicleHealth > 0f)
             {
                 // Spawn fire VFX on car.
+                if(m_VisualEffect == null)
+                {
+                    // GTA 3 sets the flame at the "headlights" position
+                    Vector3 enginePosition = new Vector3(0f, 1.25f, 1.5f); // Default for landstalker, used as fallback.
+                    var headlightsTransform = transform.Find("headlights");
+                    if(headlightsTransform != null)
+                    {
+                        enginePosition = headlightsTransform.position;
+                    }
+                    m_VisualEffect = VfxManager.Instance.SpawnVisualEffect(EVfxType.Fire, transform.position);
+                    m_VisualEffect.transform.SetParent(transform);
+                    m_VisualEffect.transform.localPosition = enginePosition;
+                }
 
-                float damage = VehicleManager.VehicleData.DamageOnFire * Time.deltaTime; // Not sure how gta3 did vehicle damage, gonna do this for now
+                // GTA3 seems to blow up vehicles by decreasing health. Once health is <= 0f, vehicle go BOOM!
+                // This takes about 5-6 seconds after flame starts based on good old iOS Clock stopwatch.
+                float damage = VehicleManager.VehicleData.DamageOnFire * Time.deltaTime;
                 DamageVehicle(damage);
+            }
+            if(m_VehicleHealth <= 0f)
+            {
+                BlowUp();
             }
         }
 
