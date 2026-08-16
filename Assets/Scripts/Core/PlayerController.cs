@@ -269,7 +269,11 @@ namespace GTA3Unity.Core
             }
             if(Input.GetKeyUp(KeyCode.Alpha1))
             {
-                VfxManager.Instance.SpawnVisualEffect(EVfxType.Fire, transform.position);
+                VfxManager.Instance.SpawnFire(transform.position);
+            }
+            if(Input.GetKeyUp(KeyCode.Alpha2))
+            {
+                VfxManager.Instance.SpawnSmoke(transform.position);
             }
             if(Input.GetKeyUp(KeyCode.F))
             {

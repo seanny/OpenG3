@@ -3126,6 +3126,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OpenG3.Core.VfxManager
   m_FirePrefab: {fileID: 4483871930289545552, guid: 6f1c439ab58138545a191a1c5a652d26, type: 3}
+  m_SmokePrefab: {fileID: 5744193715165421939, guid: e8dab5fa070d06e4288eeb93854272b9, type: 3}
 --- !u!1 &1136849343
 GameObject:
   m_ObjectHideFlags: 0

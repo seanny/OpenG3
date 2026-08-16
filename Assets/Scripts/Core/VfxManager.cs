@@ -8,7 +8,8 @@ namespace OpenG3.Core
 {
     public enum EVfxType
     {
-        Fire
+        Fire,
+        Smoke
     };
 
     public class VfxManager : MonoBehaviour
@@ -16,6 +17,7 @@ namespace OpenG3.Core
         public static VfxManager Instance { get; private set; }
 
         [SerializeField] private VisualEffect m_FirePrefab;
+        [SerializeField] private VisualEffect m_SmokePrefab;
 
         void Awake()
         {
@@ -33,32 +35,32 @@ namespace OpenG3.Core
             }
         }
 
-        public VisualEffect SpawnVisualEffect(EVfxType vfxType, Vector3 position)
+        public VisualEffect SpawnFire(Vector3 position)
         {
-            switch(vfxType)
-            {
-                case EVfxType.Fire:
-                    return SpawnFireVfx(position);
-            }
-            return null;
+            return SpawnVisualEffect(m_SmokePrefab, position, "flame1", "FireTexture");
         }
 
-        private VisualEffect SpawnFireVfx(Vector3 position)
+        public VisualEffect SpawnSmoke(Vector3 position)
         {
-            var vfxObject = GameObject.Instantiate(m_FirePrefab, position, Quaternion.identity);
+            return SpawnVisualEffect(m_SmokePrefab, position, "cloudmasked");
+        }
+
+        private VisualEffect SpawnVisualEffect(VisualEffect prefab, Vector3 position, string textureName, string texturePropertyName = "MainTexture")
+        {
+            var vfxObject = GameObject.Instantiate(prefab, position, Quaternion.identity);
             if(vfxObject == null)
             {
-                Debug.LogError("Unable to spawn fire vfx");
+                Debug.LogError($"Unable to spawn {textureName} vfx");
                 return null;
             }
 
-            var texture = FileLoader.Instance.GetFrontendTexture("flame1", "particle");
+            var texture = FileLoader.Instance.GetFrontendTexture(textureName, "particle");
             if(texture == null)
             {
-                Debug.LogError($"Cannot set texture: particle.txd does not contain flame1");
+                Debug.LogError($"Cannot set texture: particle.txd does not contain {textureName}");
                 return vfxObject;
             }
-            vfxObject.SetTexture("FireTexture", texture);
+            vfxObject.SetTexture(texturePropertyName, texture);
             return vfxObject;
         }
     }

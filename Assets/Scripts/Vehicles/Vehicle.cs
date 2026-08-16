@@ -1,7 +1,6 @@
 using GTA3Unity.Core;
 using GTA3Unity;
 using OpenG3.Core;
-using RenderWareIo.Structs.Col;
 using StarterAssets;
 using UnityEngine;
 using UnityEngine.VFX;
@@ -18,7 +17,7 @@ namespace OpenG3.Vehicles
     }
 
     [RequireComponent(typeof(Rigidbody))]
-    public abstract class Vehicle: GtaObject
+    public abstract class Vehicle : GtaObject
     {
         public string VehicleIdentifier => m_VehicleIdentifier;
         public PedObject Driver => m_Driver;
@@ -33,7 +32,8 @@ namespace OpenG3.Vehicles
         [SerializeField] protected float m_VehicleHealth;
         [SerializeField] protected float DamageWhenFlipped = 40;
 
-        protected VisualEffect m_VisualEffect;
+        protected VisualEffect m_FireVisualEffect;
+        protected VisualEffect m_SmokeVisualEffect;
         protected Rigidbody m_RigidBody;
         private bool m_IsFlippedOver;
         private CharacterController m_DriverController;
@@ -48,44 +48,63 @@ namespace OpenG3.Vehicles
 
         protected virtual void Update()
         {
-            if(m_VehicleState == EVehicleState.Wrecked)
+            if (m_VehicleState == EVehicleState.Wrecked)
             {
                 return;
             }
 
             m_IsFlippedOver = transform.up.y < 0f;
 
-            if(m_IsFlippedOver && m_VehicleHealth > 250)
+            if (m_IsFlippedOver && m_VehicleHealth > 250)
             {
                 float damage = VehicleManager.VehicleData.DamageWhenFlipped * Time.deltaTime;
                 DamageVehicle(damage);
             }
 
-            if(m_VehicleHealth <= 250 && m_VehicleHealth > 0f)
+            if (m_VehicleHealth <= 0f)
             {
-                // Spawn fire VFX on car.
-                if(m_VisualEffect == null)
+                BlowUp();
+                return;
+            }
+
+            // GTA 3 sets the flame and smoke at the "headlights" position
+            if (m_VehicleHealth < 600)
+            {
+                // Spawn smoke VFX on car.
+                if (m_SmokeVisualEffect == null)
                 {
-                    // GTA 3 sets the flame at the "headlights" position
                     Vector3 enginePosition = new Vector3(0f, 1.25f, 1.5f); // Default for landstalker, used as fallback.
                     var headlightsTransform = transform.Find("headlights");
-                    if(headlightsTransform != null)
+                    if (headlightsTransform != null)
                     {
                         enginePosition = headlightsTransform.position;
                     }
-                    m_VisualEffect = VfxManager.Instance.SpawnVisualEffect(EVfxType.Fire, transform.position);
-                    m_VisualEffect.transform.SetParent(transform);
-                    m_VisualEffect.transform.localPosition = enginePosition;
+                    m_SmokeVisualEffect = VfxManager.Instance.SpawnSmoke(transform.position);
+                    m_SmokeVisualEffect.transform.SetParent(transform);
+                    m_SmokeVisualEffect.transform.localPosition = enginePosition;
+                }
+            }
+
+            if (m_VehicleHealth < 250)
+            {
+                // Spawn fire VFX on car.
+                if (m_FireVisualEffect == null)
+                {
+                    Vector3 enginePosition = new Vector3(0f, 1.25f, 1.5f); // Default for landstalker, used as fallback.
+                    var headlightsTransform = transform.Find("headlights");
+                    if (headlightsTransform != null)
+                    {
+                        enginePosition = headlightsTransform.position;
+                    }
+                    m_FireVisualEffect = VfxManager.Instance.SpawnFire(transform.position);
+                    m_FireVisualEffect.transform.SetParent(transform);
+                    m_FireVisualEffect.transform.localPosition = enginePosition;
                 }
 
                 // GTA3 seems to blow up vehicles by decreasing health. Once health is <= 0f, vehicle go BOOM!
                 // This takes about 5-6 seconds after flame starts based on good old iOS Clock stopwatch.
                 float damage = VehicleManager.VehicleData.DamageOnFire * Time.deltaTime;
                 DamageVehicle(damage);
-            }
-            if(m_VehicleHealth <= 0f)
-            {
-                BlowUp();
             }
         }
 
@@ -96,7 +115,7 @@ namespace OpenG3.Vehicles
 
         public virtual bool SetHandlingData(string vehicleIdentifier)
         {
-            if(!HandlingManager.Data.TryGetValue(vehicleIdentifier, out HandlingData handlingData))
+            if (!HandlingManager.Data.TryGetValue(vehicleIdentifier, out HandlingData handlingData))
             {
                 return false;
             }
@@ -109,7 +128,7 @@ namespace OpenG3.Vehicles
         {
             base.SetModel(modelIndex);
 
-            if(m_PedModel == null)
+            if (m_PedModel == null)
             {
                 return;
             }
@@ -117,7 +136,7 @@ namespace OpenG3.Vehicles
             // Vehicle bodies use WheelColliders for physics. Concave MeshColliders
             // cannot be attached to their dynamic Rigidbody.
             MeshCollider[] meshColliders = m_PedModel.GetComponentsInChildren<MeshCollider>(true);
-            for(int i = 0; i < meshColliders.Length; i++)
+            for (int i = 0; i < meshColliders.Length; i++)
             {
                 meshColliders[i].enabled = false;
             }
@@ -130,24 +149,24 @@ namespace OpenG3.Vehicles
 
         public void SetDriver(PedObject ped)
         {
-            if(ped == null)
+            if (ped == null)
             {
                 return;
             }
 
-            if(m_Driver == ped)
+            if (m_Driver == ped)
             {
                 return;
             }
 
-            if(m_Driver != null)
+            if (m_Driver != null)
             {
                 ClearDriver();
             }
 
             m_Driver = ped;
             m_DriverController = ped.GetComponent<CharacterController>();
-            if(m_DriverController != null)
+            if (m_DriverController != null)
             {
                 // A CharacterController parented to a dynamic vehicle can
                 // create an impulse during entry and fight the vehicle body.
@@ -161,7 +180,7 @@ namespace OpenG3.Vehicles
 
         public void ClearDriver()
         {
-            if(m_Driver == null)
+            if (m_Driver == null)
             {
                 return;
             }
@@ -174,7 +193,7 @@ namespace OpenG3.Vehicles
             m_DriverControllerWasEnabled = false;
 
             driver.transform.SetParent(null, worldPositionStays: true);
-            if(driverController != null)
+            if (driverController != null)
             {
                 driverController.enabled = driverControllerWasEnabled;
             }
@@ -206,7 +225,7 @@ namespace OpenG3.Vehicles
 
         public virtual void DamageVehicle(float damage)
         {
-            if(m_VehicleHealth <= 0f)
+            if (m_VehicleHealth <= 0f)
             {
                 return;
             }
@@ -216,22 +235,22 @@ namespace OpenG3.Vehicles
 
         void OnCollisionEnter(Collision collision)
         {
-            if(m_VehicleHealth <= 0f)
+            if (m_VehicleHealth <= 0f)
             {
                 return;
             }
 
             float impulse = collision.impulse.magnitude / 50f; // gta3 units appears to be closest to: unity collision impulse magnitude / 50f
 
-            if(impulse <= 25f)
+            if (impulse <= 25f)
             {
                 // If impulse is less than 25, no damage is applied
                 return;
             }
 
 
-            float damage = (impulse - 25f) * HandlingData.CollisionDamageMultiplier * 0.6f;            
-            if(m_Driver != null && m_Driver is PlayerController)
+            float damage = (impulse - 25f) * HandlingData.CollisionDamageMultiplier * 0.6f;
+            if (m_Driver != null && m_Driver is PlayerController)
             {
                 damage /= 2f;
             }
@@ -239,7 +258,7 @@ namespace OpenG3.Vehicles
             {
                 damage /= 4f;
             }
-            Debug.Log(  $"Vehicle: {name}\n" +
+            Debug.Log($"Vehicle: {name}\n" +
                         $"Damage: {damage}\n" +
                         $"Magnitude: {collision.impulse.magnitude}\n" +
                         $"SqrMagnitude: {collision.impulse.sqrMagnitude}\n" +
