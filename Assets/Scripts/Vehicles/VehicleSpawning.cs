@@ -31,7 +31,27 @@ namespace OpenG3.Vehicles
         }
 
         public static List<VehicleDefinition> Vehicles { get; private set; } = new();
-        public static Dictionary<Guid, Vehicle> SpawnedVehicles { get; private set; } = new();
+        public static Dictionary<int, Vehicle> SpawnedVehicles { get; private set; } = new();
+        private static int NextVehicleId = 0;
+
+        private static int AllocateVehicleId()
+        {
+            return NextVehicleId++;
+        }
+
+        internal static void RegisterSpawnedVehicle(Vehicle vehicle)
+        {
+            if(vehicle == null)
+            {
+                return;
+            }
+
+            int runtimeId = AllocateVehicleId();
+            if(vehicle.SetRuntimeId(runtimeId))
+            {
+                SpawnedVehicles.Add(runtimeId, vehicle);
+            }
+        }
 
         public static void AddVehicle(RenderWareIo.Structs.Ide.Car ideCar)
         {
@@ -98,7 +118,7 @@ namespace OpenG3.Vehicles
                 Car car = gameObject.AddComponent<Car>();
                 car.SetVehicleIdentifier(validDefinitions[randIndex].HandlingId);
                 car.SetModel(validDefinitions[randIndex].ModelIndex);
-                SpawnedVehicles.Add(Guid.NewGuid(), car);
+                RegisterSpawnedVehicle(car);
                 return car;
             }
             return null;
@@ -111,7 +131,7 @@ namespace OpenG3.Vehicles
         /// <param name="deltaTime"></param>
         public static void RemoveNonMissionDistantOrWreckedSpawnedVehicles(PlayerController player, float deltaTime)
         {
-            List<Guid> vehiclesToRemove = new();
+            List<int> vehiclesToRemove = new();
             foreach(var vehicle in SpawnedVehicles)
             {
                 if(vehicle.Value == null)

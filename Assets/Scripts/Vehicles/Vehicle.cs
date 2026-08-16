@@ -25,6 +25,7 @@ namespace OpenG3.Vehicles
     [RequireComponent(typeof(Rigidbody))]
     public abstract class Vehicle : GtaObject
     {
+        public int VehicleRuntimeId => m_VehicleRuntimeId;
         public string VehicleIdentifier => m_VehicleIdentifier;
         public PedObject Driver => m_Driver;
         public HandlingData HandlingData => m_HandlingData;
@@ -42,6 +43,7 @@ namespace OpenG3.Vehicles
         [SerializeField] protected EVehicleType m_VehicleType = EVehicleType.Normal;
         [SerializeField] protected float m_DeathTime = 0f;
 
+        private int m_VehicleRuntimeId = -1;
         protected VisualEffect m_FireVisualEffect;
         protected VisualEffect m_SmokeVisualEffect;
         protected Rigidbody m_RigidBody;
@@ -49,11 +51,30 @@ namespace OpenG3.Vehicles
         private CharacterController m_DriverController;
         private bool m_DriverControllerWasEnabled;
 
+        internal bool SetRuntimeId(int runtimeId)
+        {
+            if(m_VehicleRuntimeId > -1)
+            {
+                return false;
+            }
+
+            m_VehicleRuntimeId = runtimeId;
+            return true;
+        }
+
         protected virtual void Start()
         {
             m_RigidBody = GetComponent<Rigidbody>();
             Debug.Assert(m_RigidBody != null);
             m_VehicleHealth = 1000f;
+        }
+
+        void OnDestroy()
+        {
+            if(VehicleSpawning.SpawnedVehicles.ContainsKey(m_VehicleRuntimeId))
+            {
+                VehicleSpawning.SpawnedVehicles.Remove(m_VehicleRuntimeId);
+            }
         }
 
         protected virtual void Update()
