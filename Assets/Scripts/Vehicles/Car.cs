@@ -365,16 +365,21 @@ namespace OpenG3.Vehicles
             m_RigidBody.AddForce(0, VehicleManager.VehicleData.VehicleBlowUpUpwardForce, 0, ForceMode.Impulse);
             SetState(EVehicleState.Wrecked);
             m_VehicleHealth = 0f;
-            foreach(var renderer in m_Renderers)
+            try
             {
-                foreach(var material in renderer.materials)
+                // Sometimes this fails, so put a try...catch here to prevent it from breaking rest of script
+                foreach(var renderer in m_Renderers)
                 {
-                    if(material.shader.name.Contains("SimpleBurnableLit"))
+                    foreach(var material in renderer.materials)
                     {
-                        material.SetFloat("_Burnt", VehicleManager.VehicleData.VehicleShaderBurntMax);
+                        if(material.shader.name.Contains("SimpleBurnableLit"))
+                        {
+                            material.SetFloat("_Burnt", VehicleManager.VehicleData.VehicleShaderBurntMax);
+                        }
                     }
                 }
             }
+            catch(Exception) { }
             RemoveVisualEffects();
             UnparentWheels();
             UnparentDoors();
