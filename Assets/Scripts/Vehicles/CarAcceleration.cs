@@ -39,13 +39,9 @@ namespace OpenG3.Vehicles
         private int m_FixedUpdateCount;
         private float m_LastLoggedRequestedPedal = float.NaN;
         private bool m_LastLoggedHandBrake;
-        private int m_LastGroundedWheelCount = -1;
-        private bool m_WasDirectionChangeBraking;
         private bool m_HasLoggedAngularVelocityWarning;
         private bool m_LastUseAngularVelocity;
-        private string m_LastDriveState = string.Empty;
 
-        private float m_CalculatePedals;
 
         private void Awake()
         {
@@ -89,8 +85,6 @@ namespace OpenG3.Vehicles
             m_RequestedPedal = 0.0f;
             m_HandBrake = false;
             m_FixedUpdateCount = 0;
-            m_LastGroundedWheelCount = -1;
-            m_LastDriveState = string.Empty;
             m_IsInitialized = m_DrivenWheelCount > 0;
 
             if (!m_IsInitialized)
@@ -201,7 +195,6 @@ namespace OpenG3.Vehicles
                 m_fBrakePedal = Mathf.Abs(m_RequestedPedal);
             }
 
-            m_WasDirectionChangeBraking = directionChangeBraking;
             stopwatch.Stop();
             PerformanceMonitor.SetValue("CalculatePedals", stopwatch.Elapsed.TotalMilliseconds);
         }
