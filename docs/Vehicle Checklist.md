@@ -25,7 +25,7 @@ The goal is **not** to reproduce every detail of the original vehicle implementa
 * [ ] **[P2]** Create a dedicated train implementation.
 * [ ] **[P2]** Add special handling for aircraft/Dodo behaviour.
 * [ ] **[P1]** Support remotely controlled vehicles such as the RC Bandit.
-* [ ] **[P0]** Give every spawned vehicle a stable runtime identifier.
+* [X] **[P0]** Give every spawned vehicle a stable runtime identifier.
 * [ ] **[P0]** Allow mission/script systems to retain references to vehicles.
 * [ ] **[P0]** Detect references to vehicles that have been destroyed or despawned.
 * [ ] **[P0]** Define basic vehicle states such as:
