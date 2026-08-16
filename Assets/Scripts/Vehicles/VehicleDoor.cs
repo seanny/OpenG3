@@ -189,7 +189,6 @@ namespace GTA3Unity.Vehicles
 
         void OnTriggerEnter(Collider other)
         {
-            Debug.Log($"VehicleDoor.OnTriggerEnter: {other.name}");
             if(m_IsDamaged == true)
             {
                 return;
@@ -199,12 +198,20 @@ namespace GTA3Unity.Vehicles
             Vehicle vehicle = other.GetComponentInParent<Vehicle>();
             if(vehicle != null)
             {
-                Debug.Log($"VehicleDoor.OnTriggerEnter: VehicleId: {vehicle.VehicleIdentifier} ParentId: {parentVehicle.VehicleIdentifier} Vehicle is parent: {vehicle == parentVehicle}");
                 if(vehicle == parentVehicle)
                 {
                     return;
                 }
 
+                SetDamaged(true);
+                return;
+            }
+
+            // Static, solid colliders represent world geometry without making the door
+            // a physical obstacle. Ignore trigger volumes and pedestrian colliders.
+            if(other.attachedRigidbody == null && !other.isTrigger &&
+               other.GetComponentInParent<PedObject>() == null)
+            {
                 SetDamaged(true);
             }
         }
