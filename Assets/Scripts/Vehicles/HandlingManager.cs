@@ -7,7 +7,7 @@ using UnityEngine;
 // https://projectcerbera.com/gta/3/tutorials/handling
 // https://projectcerbera.com/gta/3-vc/tutorials/detailed-acceleration
 // "heavy vehicle is given more power by the game than a light vehicle with the same Engine Acceleration rate. This is why some heavy trucks can reach a higher top speeds than the light sports cars."
-namespace GTA3Unity.Vehicles
+namespace OpenG3.Vehicles
 {
     [Flags]
     public enum EHandlingFlags

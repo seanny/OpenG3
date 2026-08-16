@@ -4,7 +4,7 @@ using StarterAssets;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
-namespace GTA3Unity.Vehicles
+namespace OpenG3.Vehicles
 {
     [RequireComponent(typeof(Rigidbody))]
     public class CarAcceleration : MonoBehaviour

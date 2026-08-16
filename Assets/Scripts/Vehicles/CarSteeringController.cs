@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace GTA3Unity.Vehicles
+namespace OpenG3.Vehicles
 {
     /// <summary>
     /// Applies smoothed steering input to the front wheel colliders of a car.

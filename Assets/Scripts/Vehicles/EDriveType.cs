@@ -1,4 +1,4 @@
-namespace GTA3Unity.Vehicles
+namespace OpenG3.Vehicles
 {
     public enum EDriveType
     {

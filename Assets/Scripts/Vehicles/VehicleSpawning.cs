@@ -4,7 +4,7 @@ using GTA3Unity.Dat;
 using RenderWareIo.Structs.Ide;
 using UnityEngine;
 
-namespace GTA3Unity.Vehicles
+namespace OpenG3.Vehicles
 {
     public enum EVehicleClass
     {

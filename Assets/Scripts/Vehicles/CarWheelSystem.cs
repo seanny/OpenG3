@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using IdeCar = RenderWareIo.Structs.Ide.Car;
 
-namespace GTA3Unity.Vehicles
+namespace OpenG3.Vehicles
 {
     /// <summary>
     /// Builds and updates the wheel colliders and their visual models for a car.

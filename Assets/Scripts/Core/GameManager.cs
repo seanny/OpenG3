@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using GTA3Unity.UI;
-using GTA3Unity.Vehicles;
+using OpenG3.Vehicles;
 using UnityEngine;
 using UnityEngine.Video;
 

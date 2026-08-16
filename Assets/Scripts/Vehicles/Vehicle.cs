@@ -1,11 +1,12 @@
 using GTA3Unity.Core;
+using GTA3Unity;
 using OpenG3.Core;
 using RenderWareIo.Structs.Col;
 using StarterAssets;
 using UnityEngine;
 using UnityEngine.VFX;
 
-namespace GTA3Unity.Vehicles
+namespace OpenG3.Vehicles
 {
     public enum EVehicleState
     {

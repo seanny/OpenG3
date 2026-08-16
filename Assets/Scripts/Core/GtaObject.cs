@@ -1,4 +1,4 @@
-using GTA3Unity.Vehicles;
+using OpenG3.Vehicles;
 using UnityEngine;
 
 namespace GTA3Unity.Core

@@ -2,11 +2,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using GTA3Unity.Core;
+using GTA3Unity;
 using StarterAssets;
 using UnityEngine;
 using IdeCar = RenderWareIo.Structs.Ide.Car;
 
-namespace GTA3Unity.Vehicles
+namespace OpenG3.Vehicles
 {
     public enum EVehicleDoorIndex
     {

@@ -3,7 +3,7 @@ using System.Globalization;
 using System.IO;
 using UnityEngine;
 
-namespace GTA3Unity.Vehicles
+namespace OpenG3.Vehicles
 {
     [Serializable]
     public class VehicleData

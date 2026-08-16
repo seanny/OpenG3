@@ -3,7 +3,7 @@ using GTA3Unity.Core;
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace GTA3Unity.Vehicles
+namespace OpenG3.Vehicles
 {
     public enum EDoorState
     {

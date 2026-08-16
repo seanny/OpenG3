@@ -3,7 +3,7 @@ using UnityEngine;
 using GTA3Unity.Core;
 using System.Collections.Generic;
 
-namespace GTA3Unity.Vehicles
+namespace OpenG3.Vehicles
 {
     /// <summary>
     /// Creates animated door anchors and places their intact and damaged meshes.

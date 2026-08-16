@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 #endif
 using StarterAssets;
 using System.Collections;
-using GTA3Unity.Vehicles;
+using OpenG3.Vehicles;
 using System;
 using Unity.VisualScripting;
 using OpenG3.Core;

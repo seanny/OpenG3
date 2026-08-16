@@ -13,7 +13,7 @@ using RenderWareIo.Structs.Ide;
 using RenderWareIo.Structs.Ifp;
 using Unity.AI.Navigation;
 using GTA3Unity.UI;
-using GTA3Unity.Vehicles;
+using OpenG3.Vehicles;
 
 namespace GTA3Unity
 {
