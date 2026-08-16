@@ -6,6 +6,7 @@ using GTA3Unity;
 using StarterAssets;
 using UnityEngine;
 using IdeCar = RenderWareIo.Structs.Ide.Car;
+using UnityEngine.VFX;
 
 namespace OpenG3.Vehicles
 {
@@ -374,8 +375,25 @@ namespace OpenG3.Vehicles
                     }
                 }
             }
+            RemoveVisualEffects();
             UnparentWheels();
             UnparentDoors();
+        }
+
+        private void RemoveVisualEffects()
+        {
+            List<VisualEffect> visualEffects = new();
+            for(int i = 0; i < transform.childCount; i++)
+            {
+                if(transform.GetChild(i).TryGetComponent<VisualEffect>(out VisualEffect vfx))
+                {
+                    visualEffects.Add(vfx);
+                }
+            }
+            foreach(var vfx in visualEffects)
+            {
+                Destroy(vfx.gameObject);
+            }
         }
 
         private void UnparentDoors()
@@ -385,12 +403,22 @@ namespace OpenG3.Vehicles
                 return;
             }
 
-            var doors = m_PedModel.GetComponentsInChildren<GameObject>();
-            for (int i = 0; i < doors.Length; i++)
+            var doors = m_PedModel.GetComponentsInChildren<VehicleDoor>();
+            foreach(var door in doors)
             {
-                if(doors[i].name.StartsWith("door_"))
+                door.transform.SetParent(null);
+                door.SetDamaged(true);
+                // FIXME: doors seem to go through the ground.
+                var rigidBody = door.GetComponent<Rigidbody>();
+                if(rigidBody != null)
                 {
-                    doors[i].transform.SetParent(null);
+                    rigidBody.isKinematic = false;
+                }
+                var meshCollider = door.GetComponent<MeshCollider>();
+                if(meshCollider != null)
+                {
+                    meshCollider.isTrigger = false;
+                    meshCollider.convex = false;
                 }
             }
         }

@@ -1891,7 +1891,7 @@ MonoBehaviour:
   m_Driver: {fileID: 0}
   m_VehicleState: 0
   m_VehicleHealth: 0
-  DamageWhenOnFire: 3
+  DamageWhenFlipped: 40
   m_CarAcceleration: {fileID: 0}
 --- !u!54 &532789614
 Rigidbody:

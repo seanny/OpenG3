@@ -48,6 +48,11 @@ namespace OpenG3.Vehicles
 
         protected virtual void Update()
         {
+            if(m_VehicleState == EVehicleState.Wrecked)
+            {
+                return;
+            }
+
             m_IsFlippedOver = transform.up.y < 0f;
 
             if(m_IsFlippedOver && m_VehicleHealth > 250)
