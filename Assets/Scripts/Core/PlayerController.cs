@@ -149,7 +149,7 @@ namespace GTA3Unity.Core
 
             m_Vehicle = vehicle;
             SetPedState(EPedState.Driving);
-            PlayAnimation("CAR_sit");
+            PlayAnimation(vehicle.GetDriverAnimationName());
             TeleportPlayer(vehicle.transform.position);
             vehicle.SetDriver(this);
         }
@@ -259,12 +259,23 @@ namespace GTA3Unity.Core
                         m_Vehicle.BlowUp();
                         return;
                     }
+                    UpdateVehicleAnimation();
                     m_Vehicle.OnInput(_input);
                     break;
                 case EPedState.Passenger:
                     break;
             }
 
+        }
+
+        private void UpdateVehicleAnimation()
+        {
+            if(m_Vehicle == null)
+            {
+                return;
+            }
+
+            PlayAnimation(m_Vehicle.GetDriverAnimationName());
         }
 
         private void FindVehicles()
@@ -359,6 +370,11 @@ namespace GTA3Unity.Core
 
         private void Move()
         {
+            if(m_PedState != EPedState.OnFoot)
+            {
+                return;
+            }
+
             // set target speed based on move speed, sprint speed and if sprint is pressed
             float targetSpeed = _input.sprint ? SprintSpeed : MoveSpeed;
 
@@ -424,6 +440,11 @@ namespace GTA3Unity.Core
 
         private void JumpAndGravity()
         {
+            if(m_PedState != EPedState.OnFoot)
+            {
+                return;
+            }
+
             if (Grounded)
             {
                 // reset the fall timeout timer
@@ -476,6 +497,11 @@ namespace GTA3Unity.Core
 
         private void UpdateMovementAnimation(bool hasMoveInput, float targetSpeed)
         {
+            if(m_PedState != EPedState.OnFoot)
+            {
+                return;
+            }
+
             if (!Grounded)
             {
                 PlayPlayerAnimation(FallAnimation);

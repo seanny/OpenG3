@@ -42,6 +42,14 @@ namespace OpenG3.Vehicles
         public EVehicleType VehicleType => m_VehicleType;
         public float DeathTime => m_DeathTime;
 
+        /// <summary>
+        /// Returns the animation clip used when a ped sits in the driver's seat.
+        /// </summary>
+        public virtual string GetDriverAnimationName()
+        {
+            return "CAR_sit";
+        }
+
         [SerializeField] private string m_VehicleIdentifier;
         [SerializeField] protected HandlingData m_HandlingData;
         [SerializeField] private PedObject m_Driver;

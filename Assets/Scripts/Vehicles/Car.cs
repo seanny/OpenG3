@@ -29,6 +29,14 @@ namespace OpenG3.Vehicles
     {
         public Dictionary<EVehicleDoorIndex, VehicleDoor> VehicleDoors => m_VehicleDoors;
 
+        public override string GetDriverAnimationName()
+        {
+            return HandlingData != null &&
+                HandlingData.Flags.HasFlag(EHandlingFlags.IsLow)
+                ? "CAR_Lsit"
+                : base.GetDriverAnimationName();
+        }
+
         private int m_VehicleBodyLayer = -1;
         private bool m_IsInitialized;
         private bool m_IsVan;
