@@ -56,7 +56,7 @@ The goal is **not** to reproduce every detail of the original vehicle implementa
 * [X] **[P0]** Resolve texture dictionary.
 * [X] **[P0]** Resolve handling ID.
 * [X] **[P0]** Resolve vehicle type/class.
-* [ ] **[P0]** Resolve vehicle animation group where required.
+* [X] **[P0]** Resolve vehicle animation group where required.
 * [X] **[P0]** Resolve wheel scale.
 * [ ] **[P0]** Resolve relevant vehicle flags.
 * [X] **[P1]** Resolve vehicle frequency/classification data required by traffic spawning.
