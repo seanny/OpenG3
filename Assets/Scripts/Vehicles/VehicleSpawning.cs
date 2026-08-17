@@ -189,9 +189,10 @@ namespace OpenG3.Vehicles
                     continue;
                 }
 
-                if(instance.VehicleType == EVehicleType.Mission)
+                if (instance.VehicleType == EVehicleType.Mission ||
+                    instance.ControlState == EVehicleControlState.MissionControlled)
                 {
-                    // Prevent mission vehicles from being despawned
+                    // Prevent mission-owned or mission-controlled vehicles from being despawned.
                     continue;
                 }
 
@@ -233,8 +234,14 @@ namespace OpenG3.Vehicles
                 }
                 Vehicle instance = vehicle.Value;
 
-                if(instance.VehicleType == EVehicleType.Mission)
+                if (instance.VehicleType == EVehicleType.Mission)
                 {
+                    if (instance.ControlState == EVehicleControlState.MissionControlled)
+                    {
+                        instance.TrySetControlState(EVehicleControlState.None);
+                        instance.TrySetLifecycleState(EVehicleLifecycleState.Abandoned);
+                    }
+
                     instance.SetVehicleType(EVehicleType.Normal);
                 }
             }

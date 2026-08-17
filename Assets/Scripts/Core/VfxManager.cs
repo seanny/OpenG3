@@ -54,6 +54,13 @@ namespace OpenG3.Core
             List<VisualEffect> visualEffectsToRemove = new();
             foreach(var visualEffect in m_SpawnedVisualEffects)
             {
+                if(visualEffect == null)
+                {
+                    // Temp fix for: "MissingReferenceException: The object of type 'UnityEngine.VFX.VisualEffect' has been destroyed but you are still trying to access it."
+                    // In reality we should remove it from the list
+                    continue;
+                }
+
                 float distance = Vector3.Distance(PlayerController.Instance.transform.position, visualEffect.transform.position);
                 if(distance > 50.0f)
                 {

@@ -363,7 +363,7 @@ namespace OpenG3.Vehicles
         public override void BlowUp()
         {
             m_RigidBody.AddForce(0, VehicleManager.VehicleData.VehicleBlowUpUpwardForce, 0, ForceMode.Impulse);
-            SetState(EVehicleState.Wrecked);
+            TrySetLifecycleState(EVehicleLifecycleState.Wrecked);
             m_VehicleHealth = 0f;
             try
             {

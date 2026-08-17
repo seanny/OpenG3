@@ -28,7 +28,7 @@ The goal is **not** to reproduce every detail of the original vehicle implementa
 * [X] **[P0]** Give every spawned vehicle a stable runtime identifier.
 * [ ] **[P0]** Allow mission/script systems to retain references to vehicles.
 * [X] **[P0]** Detect references to vehicles that have been destroyed or despawned.
-* [ ] **[P0]** Define basic vehicle states such as:
+* [X] **[P0]** Define basic vehicle states such as:
 
   * Player controlled
   * AI controlled
@@ -36,7 +36,7 @@ The goal is **not** to reproduce every detail of the original vehicle implementa
   * Abandoned
   * Mission controlled
   * Wrecked
-* [ ] **[P0]** Allow transition between these states without recreating the vehicle.
+* [X] **[P0]** Allow transition between these states without recreating the vehicle.
 * [X] **[P0]** Keep vehicle gameplay logic separate from rendering/model loading.
 * [X] **[P0]** Make vehicle physics operate from `FixedUpdate` or an equivalent fixed simulation step.
 * [X] **[P0]** Prevent frame rate from materially changing acceleration, steering, suspension or braking.

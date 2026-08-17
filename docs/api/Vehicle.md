@@ -1,6 +1,6 @@
 # Vehicle API
 
-Last Updated: 14 August 2026
+Last Updated: 16 August 2026
 
 
 ## Vehicle
@@ -17,10 +17,20 @@ Driver is a PedObject that is the driver of the vehicle.
 ### HandlingData
 HandingData represents the handling data of the vehicle and is populated through handing.cfg
 
-### VehicleState
-Vehicle state represents the present state of the vehicle which can be:
-- Player: Controlled by the player
-- AiSimple: Controlled by the AI not using the WheelColliders
-- AiPhysics: Controlled by the AI using the WheelColliders
-- Abandoned: Vehicle has no AI or player occupant
-- Wrecked: Vehicle can no longer be driven and renders the wrecked variant of its model
+### ControlState
+`ControlState` identifies who currently controls the vehicle:
+- None: No controller is assigned
+- PlayerControlled: Controlled by the player
+- AiControlled: Controlled by vehicle AI
+- MissionControlled: Controlled by mission logic
+
+Assigning a controller transitions the vehicle lifecycle to `Active`.
+
+### LifecycleState
+`LifecycleState` identifies the vehicle's world state:
+- Active: The vehicle is currently controlled or otherwise active
+- Parked: The vehicle has no controller and is parked
+- Abandoned: The vehicle has no controller and has been left in the world
+- Wrecked: The vehicle is destroyed and cannot be controlled
+
+`Wrecked` is terminal until a future repair/reset system is implemented. State transitions update the existing vehicle instance and do not recreate its GameObject, model, driver, or runtime identifier.

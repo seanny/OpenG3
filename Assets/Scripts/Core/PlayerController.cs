@@ -142,6 +142,11 @@ namespace GTA3Unity.Core
 
         public void PutInCar(Vehicle vehicle)
         {
+            if (vehicle == null || !vehicle.TrySetControlState(EVehicleControlState.PlayerControlled))
+            {
+                return;
+            }
+
             m_Vehicle = vehicle;
             SetPedState(EPedState.Driving);
             PlayAnimation("CAR_sit");
@@ -151,9 +156,12 @@ namespace GTA3Unity.Core
 
         public void ExitCar()
         {
+            Vehicle vehicle = m_Vehicle;
             SetPedState(EPedState.OnFoot);
-            m_Vehicle.ClearDriver();
-            TeleportPlayer(m_Vehicle.transform.position + m_Vehicle.transform.up * 2); // TP up for now, in future we want to TP to car door
+            vehicle.ClearDriver();
+            vehicle.TrySetControlState(EVehicleControlState.None);
+            vehicle.TrySetLifecycleState(EVehicleLifecycleState.Abandoned);
+            TeleportPlayer(vehicle.transform.position + vehicle.transform.up * 2); // TP up for now, in future we want to TP to car door
             m_Vehicle = null;
         }
 

@@ -7,13 +7,20 @@ using UnityEngine.VFX;
 
 namespace OpenG3.Vehicles
 {
-    public enum EVehicleState
+    public enum EVehicleControlState
     {
-        Player, // Controlled by player using WheelCollider
-        AiSimple, // Controlled by AI not using WheelCollider
-        AiPhysics, // Controlled by AI using WheelCollider,
-        Abandoned, // Self-explanitory
-        Wrecked, // Vehicle is using wrecked model
+        None,
+        PlayerControlled,
+        AiControlled,
+        MissionControlled
+    }
+
+    public enum EVehicleLifecycleState
+    {
+        Active,
+        Parked,
+        Abandoned,
+        Wrecked
     }
 
     public enum EVehicleType
@@ -29,7 +36,8 @@ namespace OpenG3.Vehicles
         public string VehicleIdentifier => m_VehicleIdentifier;
         public PedObject Driver => m_Driver;
         public HandlingData HandlingData => m_HandlingData;
-        public EVehicleState VehicleState => m_VehicleState;
+        public EVehicleControlState ControlState => m_ControlState;
+        public EVehicleLifecycleState LifecycleState => m_LifecycleState;
         public bool IsFlippedOver => m_IsFlippedOver;
         public EVehicleType VehicleType => m_VehicleType;
         public float DeathTime => m_DeathTime;
@@ -37,7 +45,8 @@ namespace OpenG3.Vehicles
         [SerializeField] private string m_VehicleIdentifier;
         [SerializeField] protected HandlingData m_HandlingData;
         [SerializeField] private PedObject m_Driver;
-        [SerializeField] private EVehicleState m_VehicleState;
+        [SerializeField] private EVehicleControlState m_ControlState = EVehicleControlState.None;
+        [SerializeField] private EVehicleLifecycleState m_LifecycleState = EVehicleLifecycleState.Parked;
         [SerializeField] protected float m_VehicleHealth;
         [SerializeField] protected float DamageWhenFlipped = 40;
         [SerializeField] protected EVehicleType m_VehicleType = EVehicleType.Normal;
@@ -76,7 +85,7 @@ namespace OpenG3.Vehicles
 
         protected virtual void Update()
         {
-            if (m_VehicleState == EVehicleState.Wrecked)
+            if (m_LifecycleState == EVehicleLifecycleState.Wrecked)
             {
                 m_DeathTime += Time.deltaTime;
                 return;
@@ -176,9 +185,58 @@ namespace OpenG3.Vehicles
             }
         }
 
-        public void SetState(EVehicleState vehicleState)
+        public bool TrySetControlState(EVehicleControlState controlState)
         {
-            m_VehicleState = vehicleState;
+            if (m_LifecycleState == EVehicleLifecycleState.Wrecked)
+            {
+                return false;
+            }
+
+            switch (controlState)
+            {
+                case EVehicleControlState.None:
+                    m_ControlState = controlState;
+                    return true;
+                case EVehicleControlState.PlayerControlled:
+                case EVehicleControlState.AiControlled:
+                case EVehicleControlState.MissionControlled:
+                    m_ControlState = controlState;
+                    m_LifecycleState = EVehicleLifecycleState.Active;
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        public bool TrySetLifecycleState(EVehicleLifecycleState lifecycleState)
+        {
+            if (m_LifecycleState == EVehicleLifecycleState.Wrecked &&
+                lifecycleState != EVehicleLifecycleState.Wrecked)
+            {
+                return false;
+            }
+
+            switch (lifecycleState)
+            {
+                case EVehicleLifecycleState.Active:
+                    m_LifecycleState = lifecycleState;
+                    return true;
+                case EVehicleLifecycleState.Parked:
+                case EVehicleLifecycleState.Abandoned:
+                    if (m_ControlState != EVehicleControlState.None)
+                    {
+                        return false;
+                    }
+
+                    m_LifecycleState = lifecycleState;
+                    return true;
+                case EVehicleLifecycleState.Wrecked:
+                    m_ControlState = EVehicleControlState.None;
+                    m_LifecycleState = lifecycleState;
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         public void SetDriver(PedObject ped)
