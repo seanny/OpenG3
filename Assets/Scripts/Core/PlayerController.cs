@@ -120,6 +120,7 @@ namespace GTA3Unity.Core
 
         private Vehicle m_Vehicle;
 
+        [Header("Animations")]
         private const float _threshold = 0.01f;
         private const float AnimationFadeLength = 0.15f;
         private const string IdleAnimation = "idle_stance";
@@ -149,7 +150,7 @@ namespace GTA3Unity.Core
 
             m_Vehicle = vehicle;
             SetPedState(EPedState.Driving);
-            PlayAnimation(vehicle.GetDriverAnimationName());
+            PlayPlayerAnimation(vehicle.GetDriverAnimationName());
             TeleportPlayer(vehicle.transform.position);
             vehicle.SetDriver(this);
         }
@@ -169,7 +170,7 @@ namespace GTA3Unity.Core
         {
             _controller.enabled = false;
             transform.position = position;
-            if(rotation != null)
+            if (rotation != null)
             {
                 transform.rotation = (Quaternion)rotation;
             }
@@ -179,7 +180,7 @@ namespace GTA3Unity.Core
 
         private void Awake()
         {
-            if(Instance == null)
+            if (Instance == null)
             {
                 Instance = this;
             }
@@ -192,7 +193,7 @@ namespace GTA3Unity.Core
 
         private IEnumerator Start()
         {
-            while(FileLoader.Instance == null || !FileLoader.Instance.IsDone)
+            while (FileLoader.Instance == null || !FileLoader.Instance.IsDone)
             {
                 yield return null;
             }
@@ -230,35 +231,28 @@ namespace GTA3Unity.Core
 
         private void Update()
         {
-            if(!GameManager.Instance.InGame)
+            if (!GameManager.Instance.InGame)
             {
                 return;
             }
 
-            switch(m_PedState)
+            switch (m_PedState)
             {
                 case EPedState.OnFoot:
                     FindVehicles();
                     JumpAndGravity();
                     GroundedCheck();
                     Move();
+                    UpdateExplosionImpact();
+                    UpdateGetup();
                     break;
                 case EPedState.Driving:
-                    if(m_Vehicle == null)
+                    if (m_Vehicle == null)
                     {
                         return;
                     }
                     // TODO: Need to replace these legacy Input calls with new InputSystem instead
-                    if(Input.GetKeyUp(KeyCode.F))
-                    {
-                        ExitCar();
-                        return;
-                    }
-                    if(Input.GetKeyUp(KeyCode.B))
-                    {
-                        m_Vehicle.BlowUp();
-                        return;
-                    }
+                    TryExitVehicle();
                     UpdateVehicleAnimation();
                     m_Vehicle.OnInput(_input);
                     break;
@@ -268,51 +262,88 @@ namespace GTA3Unity.Core
 
         }
 
+        private void TryExitVehicle()
+        {
+            // super unimportant but nice to have: When holding F, also turn off the engine similar to GTA V
+            if (Input.GetKeyUp(KeyCode.F))
+            {
+                ExitCar();
+            }
+        }
+
+        protected override void UpdateExplosionImpact()
+        {
+            if (m_ExplosionImpactTime <= 0f)
+            {
+                return;
+            }
+            _controller.enabled = false;
+            PlayAnimation(m_ExplosionFallAnimation);
+            m_ExplosionImpactTime -= Time.deltaTime;
+            if (m_ExplosionImpactTime <= 0f)
+            {
+                GetUp();
+            }
+        }
+
+        protected override bool UpdateGetup()
+        {
+            if(base.UpdateGetup() == false)
+            {
+                return false;
+            }
+            if (m_GettingUpTime <= 0f)
+            {
+                _controller.enabled = true;
+            }
+            return true;
+        }
+
         private void UpdateVehicleAnimation()
         {
-            if(m_Vehicle == null)
+            if (m_Vehicle == null)
             {
                 return;
             }
 
-            PlayAnimation(m_Vehicle.GetDriverAnimationName());
+            PlayPlayerAnimation(m_Vehicle.GetDriverAnimationName());
         }
 
         private void FindVehicles()
         {
-            if(Input.GetKeyUp(KeyCode.Alpha0))
+            if (Input.GetKeyUp(KeyCode.Alpha0))
             {
                 // Temp debug spawn random vehicle
                 EVehicleClass vehicleClass = (EVehicleClass)UnityEngine.Random.Range(0, (int)EVehicleClass.TotalVehicleClasses);
                 VehicleSpawning.SpawnRandomVehicle(vehicleClass, transform.position);
             }
-            if(Input.GetKeyUp(KeyCode.Alpha1))
+            if (Input.GetKeyUp(KeyCode.Alpha1))
             {
                 VfxManager.Instance.SpawnFire(transform.position);
             }
-            if(Input.GetKeyUp(KeyCode.Alpha2))
+            if (Input.GetKeyUp(KeyCode.Alpha2))
             {
                 VfxManager.Instance.SpawnSmoke(transform.position);
             }
-            if(Input.GetKeyUp(KeyCode.F))
+            if (Input.GetKeyUp(KeyCode.F))
             {
                 Vehicle[] vehs = GameObject.FindObjectsByType<Vehicle>();
-                if(vehs.Length < 1)
+                if (vehs.Length < 1)
                 {
                     return;
                 }
                 float nearestDistance = 20f;
                 Vehicle nearestVehicle = null;
-                foreach(var vehicle in vehs)
+                foreach (var vehicle in vehs)
                 {
                     float distance = Vector3.Distance(transform.position, vehicle.transform.position);
-                    if(distance < nearestDistance)
+                    if (distance < nearestDistance)
                     {
                         nearestDistance = distance;
                         nearestVehicle = vehicle;
                     }
                 }
-                if(nearestVehicle != null)
+                if (nearestVehicle != null)
                 {
                     PutInCar(nearestVehicle);
                 }
@@ -321,7 +352,7 @@ namespace GTA3Unity.Core
 
         private void LateUpdate()
         {
-            if(!GameManager.Instance.InGame)
+            if (!GameManager.Instance.InGame)
             {
                 return;
             }
@@ -370,7 +401,12 @@ namespace GTA3Unity.Core
 
         private void Move()
         {
-            if(m_PedState != EPedState.OnFoot)
+            if (m_PedState != EPedState.OnFoot)
+            {
+                return;
+            }
+
+            if (m_ExplosionImpactTime > 0f || m_GettingUpTime > 0f)
             {
                 return;
             }
@@ -440,7 +476,12 @@ namespace GTA3Unity.Core
 
         private void JumpAndGravity()
         {
-            if(m_PedState != EPedState.OnFoot)
+            if (m_PedState != EPedState.OnFoot)
+            {
+                return;
+            }
+
+            if (m_ExplosionImpactTime > 0f || m_GettingUpTime > 0f)
             {
                 return;
             }
@@ -497,7 +538,7 @@ namespace GTA3Unity.Core
 
         private void UpdateMovementAnimation(bool hasMoveInput, float targetSpeed)
         {
-            if(m_PedState != EPedState.OnFoot)
+            if (m_PedState != EPedState.OnFoot)
             {
                 return;
             }
@@ -523,7 +564,7 @@ namespace GTA3Unity.Core
             PlayPlayerAnimation(targetSpeed <= MoveSpeed ? WalkAnimation : RunAnimation);
         }
 
-        private void PlayPlayerAnimation(string animationName)
+        private void PlayPlayerAnimation(string animationName, WrapMode wrapMode = WrapMode.Loop)
         {
             if (_currentAnimation == animationName)
             {
@@ -533,7 +574,7 @@ namespace GTA3Unity.Core
             if (base.PlayAnimation(
                 animationName,
                 AnimationFadeLength,
-                WrapMode.Loop,
+                wrapMode,
                 IsLocomotionAnimation(animationName)))
             {
                 _currentAnimation = animationName;

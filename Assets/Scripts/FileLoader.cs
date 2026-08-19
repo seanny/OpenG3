@@ -14,6 +14,7 @@ using RenderWareIo.Structs.Ifp;
 using Unity.AI.Navigation;
 using GTA3Unity.UI;
 using OpenG3.Vehicles;
+using OpenG3.Core;
 
 namespace GTA3Unity
 {
@@ -269,11 +270,13 @@ namespace GTA3Unity
 
         public void PreInit()
         {
-            LoadImages();
+            var timer = System.Diagnostics.Stopwatch.StartNew();
             LoadMaterials();
             InitTxdCache();
             RegisterEarlyTxds();
             m_PreInitIsDone = true;
+            timer.Stop();
+            Debug.Log($"PreInit took {timer.Elapsed.Milliseconds}ms");
         }
 
         public void Init()
@@ -283,6 +286,7 @@ namespace GTA3Unity
 
         public IEnumerator OnInit()
         {
+            var timer = System.Diagnostics.Stopwatch.StartNew();
             while(m_PreInitIsDone == false)
             {
                 yield return null;
@@ -295,6 +299,8 @@ namespace GTA3Unity
 
             m_IsDone = true; // To prevent multiple loading of this class
             Debug.Log("FileLoader.Init begin");
+            LoadImages();
+            m_TxdMaterialCache.SetImageFile(m_MainImg, m_FallbackMaterial);
             // TODO: Load GXT
             // TODO: Load Audio
             // TODO: Load Audio
@@ -306,7 +312,9 @@ namespace GTA3Unity
             LoadPedAnimations();
             MeshSpawn.ClearCache();
             LoadDataFiles();
+            ExplosionManager.Init();
             m_IsActuallyInit = true;
+            Debug.Log($"OnInit took {timer.Elapsed.Milliseconds}ms");
         }
 
         private void LoadMaterials()
@@ -333,7 +341,6 @@ namespace GTA3Unity
         {
             m_TxdMaterialCache = new TxdMaterialCache();
             m_TxdMaterialCache.RegisterLooseTxdDirectory(Path.Combine(GameManager.Instance.GtaDirectory, "txd"));
-            m_TxdMaterialCache.SetImageFile(m_MainImg, m_FallbackMaterial);
         }
 
         private void LoadDataFiles()

@@ -7,6 +7,7 @@ using StarterAssets;
 using UnityEngine;
 using IdeCar = RenderWareIo.Structs.Ide.Car;
 using UnityEngine.VFX;
+using OpenG3.Core;
 
 namespace OpenG3.Vehicles
 {
@@ -28,6 +29,12 @@ namespace OpenG3.Vehicles
     public class Car : Vehicle
     {
         public Dictionary<EVehicleDoorIndex, VehicleDoor> VehicleDoors => m_VehicleDoors;
+        public int WheelCount => m_IsInitialized ? m_WheelSystem.WheelArrayLength : 0;
+        public IReadOnlyList<WheelSnapshot> WheelSnapshots =>
+            m_IsInitialized ? m_WheelSystem.WheelSnapshots : s_EmptyWheelSnapshots;
+
+        private static readonly IReadOnlyList<WheelSnapshot> s_EmptyWheelSnapshots =
+            Array.Empty<WheelSnapshot>();
 
         public override string GetDriverAnimationName()
         {
@@ -224,7 +231,8 @@ namespace OpenG3.Vehicles
             m_CarAcceleration.Initialize(
                 m_WheelSystem.Wheels,
                 m_WheelSystem.WheelRadius,
-                HandlingData);
+                HandlingData,
+                m_WheelSystem);
             m_SteeringController = new CarSteeringController(
                 m_WheelSystem.Wheels,
                 HandlingData.SteeringLock);
@@ -239,6 +247,25 @@ namespace OpenG3.Vehicles
                 m_VehicleDoors.Add(vehicleDoor.VehicleDoorIndex, vehicleDoor);
             }
             m_IsInitialized = true;
+        }
+
+        public bool TryGetWheelSnapshot(int wheelIndex, out WheelSnapshot snapshot)
+        {
+            if (!m_IsInitialized)
+            {
+                snapshot = default;
+                return false;
+            }
+
+            return m_WheelSystem.TryGetWheelSnapshot(wheelIndex, out snapshot);
+        }
+
+        public bool TrySetWheelDamageState(
+            int wheelIndex,
+            EWheelDamageState damageState)
+        {
+            return m_IsInitialized &&
+                m_WheelSystem.TrySetWheelDamageState(wheelIndex, damageState);
         }
 
         private void ConfigureModelLod()
@@ -372,7 +399,8 @@ namespace OpenG3.Vehicles
         {
             m_RigidBody.AddForce(0, VehicleManager.VehicleData.VehicleBlowUpUpwardForce, 0, ForceMode.Impulse);
             TrySetLifecycleState(EVehicleLifecycleState.Wrecked);
-            m_VehicleHealth = 0f;
+            m_Health = 0f;
+            ExplosionManager.CreateExplosion(EExplosionType.CarDestroyed, transform.position);
             try
             {
                 // Sometimes this fails, so put a try...catch here to prevent it from breaking rest of script

@@ -2509,9 +2509,12 @@ MonoBehaviour:
   ModelIndex: 0
   m_VehicleIdentifier: LANDSTAL
   m_Driver: {fileID: 0}
-  m_VehicleState: 0
+  m_ControlState: 0
+  m_LifecycleState: 1
   m_VehicleHealth: 0
   DamageWhenFlipped: 40
+  m_VehicleType: 0
+  m_DeathTime: 0
   m_CarAcceleration: {fileID: 0}
 --- !u!65 &1516343331
 BoxCollider:

@@ -169,21 +169,21 @@ The automobile simulation should eventually follow the same basic division used 
 * [X] **[P0]** Allow applied wheel force to generate body torque naturally.
 * [X] **[P0]** Respect front/rear/all-wheel drivetrain configuration.
 * [X] **[P0]** Respect front/rear brake bias.
-* [ ] **[P0]** Apply handbrake primarily to the rear wheels.
+* [X] **[P0]** Apply handbrake primarily to the rear wheels.
 * [X] **[P0]** Reduce lateral sliding under normal grip.
 * [X] **[P0]** Allow controlled sliding once grip is exceeded.
 * [X] **[P0]** Track wheel rotational speed.
 * [X] **[P0]** Update visual wheel rotation from wheel speed.
 * [X] **[P0]** Update front wheel visual steering angle.
-* [ ] **[P1]** Track wheel states such as:
+* [X] **[P1]** Track wheel states such as:
 
   * Normal
   * Spinning
   * Skidding
   * Locked
 * [ ] **[P1]** Trigger tyre/skid effects from wheel state.
-* [ ] **[P1]** Support burst tyres.
-* [ ] **[P1]** Reduce traction for damaged/burst wheels.
+* [X] **[P1]** Support burst tyres.
+* [X] **[P1]** Reduce traction for damaged/burst wheels.
 * [ ] **[P2]** Match GTA III's exact wheel-slip thresholds.
 
 GTA III processes individual wheel contacts with drivetrain-specific thrust, braking, traction and wheel damage rather than treating the vehicle as a single acceleration force.
@@ -370,7 +370,7 @@ GTA III processes individual wheel contacts with drivetrain-specific thrust, bra
 * [X] **[P0]** Apply collision damage.
 * [ ] **[P0]** Apply bullet damage.
 * [ ] **[P0]** Apply melee damage where appropriate.
-* [ ] **[P0]** Apply explosive damage.
+* [X] **[P0]** Apply explosive damage.
 * [X] **[P0]** Apply fire damage.
 * [X] **[P0]** Apply damage from other vehicles.
 * [ ] **[P0]** Support bulletproof vehicles.

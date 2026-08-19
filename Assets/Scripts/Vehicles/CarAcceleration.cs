@@ -34,6 +34,7 @@ namespace OpenG3.Vehicles
         private float m_RequestedPedal;
         private bool m_HandBrake;
         private int m_DrivenWheelCount;
+        private CarWheelSystem m_WheelSystem;
         private bool m_IsInitialized;
 
         private int m_FixedUpdateCount;
@@ -51,7 +52,8 @@ namespace OpenG3.Vehicles
         internal void Initialize(
             WheelCollider[] wheels,
             float wheelRadius,
-            HandlingData handlingData)
+            HandlingData handlingData,
+            CarWheelSystem wheelSystem)
         {
             if (wheels == null || wheelRadius <= 0.0f || handlingData == null)
             {
@@ -69,6 +71,7 @@ namespace OpenG3.Vehicles
             m_Wheels = wheels;
             m_WheelRadius = wheelRadius;
             m_HandlingData = handlingData;
+            m_WheelSystem = wheelSystem;
             m_DrivenWheelCount = 0;
 
             for (int i = 0; i < m_Wheels.Length; i++)
@@ -174,6 +177,7 @@ namespace OpenG3.Vehicles
 
             float driveAcceleration = CalculateDriveAcceleration(forwardSpeed);
             ApplyWheelForces(vehicleForward, forwardSpeed, driveAcceleration);
+            m_WheelSystem?.RefreshSnapshots();
         }
 
         private void CalculatePedals(float forwardSpeed)
@@ -321,21 +325,15 @@ namespace OpenG3.Vehicles
 
             float brakeAcceleration = Mathf.Max(0.0f, m_HandlingData.BrakeDeceleration) * Mathf.Clamp01(m_fBrakePedal);
 
-            float brakeForce = brakeAcceleration * vehicleMass;
-            float brakeBias = Mathf.Clamp01(m_HandlingData.BrakeBias);
-            float frontBrakeTorque = brakeForce * brakeBias * m_WheelRadius * VehicleManager.VehicleData.BrakeForceMultiplier;
-            float rearBrakeTorque = brakeForce * (1.0f - brakeBias) * m_WheelRadius * VehicleManager.VehicleData.BrakeForceMultiplier;
-
-            if (m_HandBrake)
-            {
-                // GTA's handbrake is a very aggressive stop. Apply it to both
-                // axles so the rear wheels cannot carry the entire braking
-                // load and turn the vehicle into a slide.
-                frontBrakeTorque = Mathf.Max(frontBrakeTorque, VehicleManager.VehicleData.HandbrakeTorque);
-                rearBrakeTorque = Mathf.Max(rearBrakeTorque, VehicleManager.VehicleData.HandbrakeTorque);
-            }
-
-            int groundedWheelCount = 0;
+            CalculateBrakeTorques(
+                brakeAcceleration * vehicleMass,
+                m_HandlingData.BrakeBias,
+                m_WheelRadius,
+                VehicleManager.VehicleData.BrakeForceMultiplier,
+                VehicleManager.VehicleData.HandbrakeTorque,
+                m_HandBrake,
+                out float frontBrakeTorque,
+                out float rearBrakeTorque);
 
             for (int i = 0; i < m_Wheels.Length; i++)
             {
@@ -346,56 +344,51 @@ namespace OpenG3.Vehicles
                     continue;
                 }
 
-                if (wheel.isGrounded)
+                if (!wheel.enabled)
                 {
-                    groundedWheelCount++;
+                    wheel.motorTorque = 0.0f;
+                    wheel.brakeTorque = 0.0f;
+                    continue;
                 }
 
                 bool braking = brakeAcceleration > 0.0f || m_HandBrake;
                 bool driven = IsDrivenWheel(i);
                 float driveSign = GetWheelDriveSign(wheel, vehicleForward);
 
-                wheel.motorTorque = !braking && driven ? driveTorque * driveSign : 0.0f;
+                wheel.motorTorque = CalculateMotorTorque(braking, driven, driveTorque, driveSign);
                 wheel.brakeTorque = i < 2 ? frontBrakeTorque : rearBrakeTorque;
                 stopwatch.Stop();
                 PerformanceMonitor.SetValue("ApplyWheelForces", stopwatch.Elapsed.TotalMilliseconds);
             }
-
-            ApplyLateralGrip(vehicleForward, groundedWheelCount);
         }
 
-        private void ApplyLateralGrip(Vector3 vehicleForward, int groundedWheelCount)
+        internal static void CalculateBrakeTorques(
+            float brakeForce,
+            float brakeBias,
+            float wheelRadius,
+            float brakeForceMultiplier,
+            float handbrakeTorque,
+            bool handbrake,
+            out float frontBrakeTorque,
+            out float rearBrakeTorque)
         {
-            if (groundedWheelCount == 0)
+            float clampedBrakeBias = Mathf.Clamp01(brakeBias);
+            frontBrakeTorque = brakeForce * clampedBrakeBias * wheelRadius * brakeForceMultiplier;
+            rearBrakeTorque = brakeForce * (1.0f - clampedBrakeBias) * wheelRadius * brakeForceMultiplier;
+
+            if (handbrake)
             {
-                return;
+                rearBrakeTorque = Mathf.Max(rearBrakeTorque, handbrakeTorque);
             }
+        }
 
-            float gripAssist = Mathf.Max(0.0f, VehicleManager.VehicleData.LateralGripAssist);
-            if (gripAssist <= 0.0f)
-            {
-                return;
-            }
-
-            Vector3 vehicleUp = transform.up;
-            Vector3 horizontalForward = Vector3.ProjectOnPlane(vehicleForward, vehicleUp);
-            if (horizontalForward.sqrMagnitude <= 0.0001f)
-            {
-                return;
-            }
-
-            horizontalForward.Normalize();
-            Vector3 vehicleRight = Vector3.Cross(vehicleUp, horizontalForward).normalized;
-            float lateralSpeed = Vector3.Dot(m_RigidBody.linearVelocity, vehicleRight);
-
-            // WheelCollider friction still handles contact forces, but this
-            // gentle assist keeps the chassis from skating sideways between
-            // physics steps. It is deliberately velocity-based rather than a
-            // hard velocity assignment so ramps, impacts, and suspension remain
-            // fully physical.
-            m_RigidBody.AddForce(
-                -vehicleRight * lateralSpeed * gripAssist,
-                ForceMode.Acceleration);
+        internal static float CalculateMotorTorque(
+            bool braking,
+            bool driven,
+            float driveTorque,
+            float driveSign)
+        {
+            return !braking && driven ? driveTorque * driveSign : 0.0f;
         }
 
         private void LogMotionSnapshot(

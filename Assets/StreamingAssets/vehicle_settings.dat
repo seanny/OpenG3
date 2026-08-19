@@ -13,7 +13,12 @@ HandbrakeTorque 20000.0
 LowerGearSpeedMultiplier 4.0
 BrakeForceMultiplier 4.0
 WheelGripMultiplier 2.5
-LateralGripAssist 3.0
+WheelStateSlipEnterThreshold 0.6
+WheelStateSlipExitThreshold 0.3
+WheelSpinContactSpeedThreshold 0.2
+WheelLockContactSpeedThreshold 0.005
+WheelLockRpmThreshold 1.0
+WheelBurstTractionMultiplier 0.75
 GameSpeedToMetersPerSecond 50.0
 VehicleShaderBurntMax 0.1
 VehicleBlowUpUpwardForce 10000

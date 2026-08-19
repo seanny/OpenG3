@@ -422,7 +422,7 @@ namespace GTA3Unity.Utility
 
             string fileName = $"{txdName}.txd";
 
-            if (m_ImgFile.Contains(fileName))
+            if (m_ImgFile != null && m_ImgFile.Contains(fileName))
             {
                 try
                 {

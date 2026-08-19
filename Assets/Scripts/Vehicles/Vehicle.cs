@@ -55,7 +55,6 @@ namespace OpenG3.Vehicles
         [SerializeField] private PedObject m_Driver;
         [SerializeField] private EVehicleControlState m_ControlState = EVehicleControlState.None;
         [SerializeField] private EVehicleLifecycleState m_LifecycleState = EVehicleLifecycleState.Parked;
-        [SerializeField] protected float m_VehicleHealth;
         [SerializeField] protected float DamageWhenFlipped = 40;
         [SerializeField] protected EVehicleType m_VehicleType = EVehicleType.Normal;
         [SerializeField] protected float m_DeathTime = 0f;
@@ -83,7 +82,7 @@ namespace OpenG3.Vehicles
         {
             m_RigidBody = GetComponent<Rigidbody>();
             Debug.Assert(m_RigidBody != null);
-            m_VehicleHealth = 1000f;
+            m_Health = 1000f;
         }
 
         private void OnDestroy()
@@ -101,20 +100,20 @@ namespace OpenG3.Vehicles
 
             m_IsFlippedOver = transform.up.y < 0f;
 
-            if (m_IsFlippedOver && m_VehicleHealth > 250)
+            if (m_IsFlippedOver && m_Health > 250)
             {
                 float damage = VehicleManager.VehicleData.DamageWhenFlipped * Time.deltaTime;
-                DamageVehicle(damage);
+                DamageHealth(damage);
             }
 
-            if (m_VehicleHealth <= 0f)
+            if (m_Health <= 0f)
             {
                 BlowUp();
                 return;
             }
 
             // GTA 3 sets the flame and smoke at the "headlights" position
-            if (m_VehicleHealth < 600)
+            if (m_Health < 600)
             {
                 // Spawn smoke VFX on car.
                 if (m_SmokeVisualEffect == null)
@@ -131,7 +130,7 @@ namespace OpenG3.Vehicles
                 }
             }
 
-            if (m_VehicleHealth < 250)
+            if (m_Health < 250)
             {
                 // Spawn fire VFX on car.
                 if (m_FireVisualEffect == null)
@@ -150,7 +149,7 @@ namespace OpenG3.Vehicles
                 // GTA3 seems to blow up vehicles by decreasing health. Once health is <= 0f, vehicle go BOOM!
                 // This takes about 5-6 seconds after flame starts based on good old iOS Clock stopwatch.
                 float damage = VehicleManager.VehicleData.DamageOnFire * Time.deltaTime;
-                DamageVehicle(damage);
+                DamageHealth(damage);
             }
         }
 
@@ -323,19 +322,19 @@ namespace OpenG3.Vehicles
 
         public abstract void BlowUp();
 
-        public virtual void DamageVehicle(float damage)
+        public override void DamageHealth(float damage)
         {
-            if (m_VehicleHealth <= 0f)
+            if (m_Health <= 0f)
             {
                 return;
             }
 
-            m_VehicleHealth -= damage;
+            base.DamageHealth(damage);
         }
 
         void OnCollisionEnter(Collision collision)
         {
-            if (m_VehicleHealth <= 0f)
+            if (m_Health <= 0f)
             {
                 return;
             }
@@ -365,7 +364,7 @@ namespace OpenG3.Vehicles
                         $"Impulse: {impulse}\n" +
                         $"HandlingData.CollisionDamageMultiplier: {HandlingData.CollisionDamageMultiplier}");
 
-            DamageVehicle(damage);
+            DamageHealth(damage);
         }
     }
 }

@@ -17,7 +17,12 @@ namespace OpenG3.Vehicles
         public float LowerGearSpeedMultiplier;
         public float BrakeForceMultiplier;
         public float WheelGripMultiplier;
-        public float LateralGripAssist;
+        public float WheelStateSlipEnterThreshold = 0.6f;
+        public float WheelStateSlipExitThreshold = 0.3f;
+        public float WheelSpinContactSpeedThreshold = 0.2f;
+        public float WheelLockContactSpeedThreshold = 0.005f;
+        public float WheelLockRpmThreshold = 1.0f;
+        public float WheelBurstTractionMultiplier = 0.75f;
         public float GameSpeedToMetersPerSecond;
         public float VehicleShaderBurntMax;
         public float VehicleBlowUpUpwardForce;
@@ -112,11 +117,36 @@ namespace OpenG3.Vehicles
                         NumberStyles.Float,
                         CultureInfo.InvariantCulture,
                         out vehicleData.WheelGripMultiplier),
-                    "LateralGripAssist" => float.TryParse(
+                    "WheelStateSlipEnterThreshold" => float.TryParse(
                         value,
                         NumberStyles.Float,
                         CultureInfo.InvariantCulture,
-                        out vehicleData.LateralGripAssist),
+                        out vehicleData.WheelStateSlipEnterThreshold),
+                    "WheelStateSlipExitThreshold" => float.TryParse(
+                        value,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out vehicleData.WheelStateSlipExitThreshold),
+                    "WheelSpinContactSpeedThreshold" => float.TryParse(
+                        value,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out vehicleData.WheelSpinContactSpeedThreshold),
+                    "WheelLockContactSpeedThreshold" => float.TryParse(
+                        value,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out vehicleData.WheelLockContactSpeedThreshold),
+                    "WheelLockRpmThreshold" => float.TryParse(
+                        value,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out vehicleData.WheelLockRpmThreshold),
+                    "WheelBurstTractionMultiplier" => float.TryParse(
+                        value,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out vehicleData.WheelBurstTractionMultiplier),
                     "GameSpeedToMetersPerSecond" => float.TryParse(
                         value,
                         NumberStyles.Float,

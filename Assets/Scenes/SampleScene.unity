@@ -1887,10 +1887,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GTA3Unity.Vehicles.Car
   ModelIndex: 0
+  m_Health: 0
   m_VehicleIdentifier: LANDSTAL
   m_Driver: {fileID: 0}
-  m_VehicleState: 0
-  m_VehicleHealth: 0
+  m_ControlState: 0
+  m_LifecycleState: 1
   DamageWhenFlipped: 40
   m_VehicleType: 0
   m_DeathTime: 0
@@ -4655,6 +4656,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GTA3Unity.Core.PlayerController
   ModelIndex: 0
+  m_Health: 0
+  m_ExplosionFallAnimation: KO_skid_front
+  m_GetupAnimation: Getup
+  m_ExplosionKnockbackTime: 1
+  m_GetUpTime: 1
   m_PedState: 0
   m_IsMissionPed: 0
   MoveSpeed: 1

@@ -189,6 +189,12 @@ namespace OpenG3.Vehicles
                     continue;
                 }
 
+                if(instance.Driver == PlayerController.Instance)
+                {
+                    // This shouldn't happen but just incase
+                    continue;
+                }
+
                 if (instance.VehicleType == EVehicleType.Mission ||
                     instance.ControlState == EVehicleControlState.MissionControlled)
                 {

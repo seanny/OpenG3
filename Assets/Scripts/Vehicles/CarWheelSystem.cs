@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using IdeCar = RenderWareIo.Structs.Ide.Car;
 
@@ -38,6 +39,12 @@ namespace OpenG3.Vehicles
         private readonly Func<int, GameObject> m_ModelFactory;
         private readonly Transform[] m_WheelVisuals = new Transform[WheelCount];
         private readonly Quaternion[] m_WheelVisualRotationOffsets = new Quaternion[WheelCount];
+        private readonly WheelFrictionCurve[] m_BaseForwardFriction = new WheelFrictionCurve[WheelCount];
+        private readonly WheelFrictionCurve[] m_BaseSidewaysFriction = new WheelFrictionCurve[WheelCount];
+        private readonly EWheelState[] m_WheelStates = new EWheelState[WheelCount];
+        private readonly EWheelDamageState[] m_WheelDamageStates = new EWheelDamageState[WheelCount];
+        private readonly bool[] m_DrivenWheels = new bool[WheelCount];
+        private readonly WheelSnapshot[] m_WheelSnapshots = new WheelSnapshot[WheelCount];
 
         internal CarWheelSystem(
             Transform vehicleTransform,
@@ -51,11 +58,19 @@ namespace OpenG3.Vehicles
             m_VehicleBodyMask = vehicleBodyMask;
             m_VehicleWheelLayer = vehicleWheelLayer;
             m_ModelFactory = modelFactory;
+            WheelSnapshots = Array.AsReadOnly(m_WheelSnapshots);
         }
 
         internal WheelCollider[] Wheels { get; private set; } = Array.Empty<WheelCollider>();
 
         internal float WheelRadius { get; private set; }
+
+        internal bool IsInitialized => Wheels.Length == WheelCount;
+
+        internal int WheelArrayLength => Wheels.Length;
+
+        internal IReadOnlyList<WheelSnapshot> WheelSnapshots { get; private set; } =
+            Array.Empty<WheelSnapshot>();
 
         internal static bool TryFindWheelFrames(
             Transform modelRoot,
@@ -83,6 +98,18 @@ namespace OpenG3.Vehicles
         {
             WheelRadius = ideCar.WheelScale * 0.5f;
             Wheels = new WheelCollider[WheelCount];
+
+            EDriveType driveType = handlingData.TransmissionData.DriveType;
+            for (int wheelIndex = 0; wheelIndex < WheelCount; wheelIndex++)
+            {
+                bool isFrontWheel = wheelIndex < FrontWheelCount;
+                m_DrivenWheels[wheelIndex] = driveType == EDriveType.BothWheel ||
+                    (isFrontWheel && driveType == EDriveType.FrontWheel) ||
+                    (!isFrontWheel && driveType == EDriveType.BackWheel);
+                m_WheelStates[wheelIndex] = EWheelState.Normal;
+                m_WheelDamageStates[wheelIndex] = EWheelDamageState.Intact;
+                m_WheelSnapshots[wheelIndex] = CreateEmptySnapshot(wheelIndex, isFrontWheel);
+            }
 
             float suspensionTravel = Mathf.Max(
                 MinimumSuspensionTravel,
@@ -150,12 +177,124 @@ namespace OpenG3.Vehicles
                     axleGripBias *
                     wheelGripMultiplier);
 
+                m_BaseForwardFriction[wheelIndex] = wheel.forwardFriction;
+                m_BaseSidewaysFriction[wheelIndex] = wheel.sidewaysFriction;
+
                 Wheels[wheelIndex] = wheel;
                 CreateWheelVisual(
                     wheelIndex,
                     wheelAnchor.transform,
                     ideCar.WheelModelId,
                     ideCar.WheelScale);
+            }
+        }
+
+        internal bool TryGetWheelSnapshot(int wheelIndex, out WheelSnapshot snapshot)
+        {
+            if (!IsInitialized || wheelIndex < 0 || wheelIndex >= WheelCount)
+            {
+                snapshot = default;
+                return false;
+            }
+
+            snapshot = m_WheelSnapshots[wheelIndex];
+            return true;
+        }
+
+        internal bool TrySetWheelDamageState(
+            int wheelIndex,
+            EWheelDamageState damageState)
+        {
+            if (!IsInitialized || wheelIndex < 0 || wheelIndex >= WheelCount)
+            {
+                return false;
+            }
+
+            if (!IsValidDamageState(damageState))
+            {
+                return false;
+            }
+
+            EWheelDamageState currentState = m_WheelDamageStates[wheelIndex];
+            if (currentState == damageState)
+            {
+                return true;
+            }
+
+            if (currentState != EWheelDamageState.Intact ||
+                damageState == EWheelDamageState.Intact)
+            {
+                return false;
+            }
+
+            m_WheelDamageStates[wheelIndex] = damageState;
+            ApplyWheelDamageState(wheelIndex);
+            RefreshSnapshots();
+            return true;
+        }
+
+        internal void RefreshSnapshots()
+        {
+            if (!IsInitialized)
+            {
+                return;
+            }
+
+            for (int wheelIndex = 0; wheelIndex < WheelCount; wheelIndex++)
+            {
+                WheelCollider wheel = Wheels[wheelIndex];
+                WheelHit hit = default;
+                bool hasContact = wheel != null && wheel.enabled &&
+                    wheel.GetGroundHit(out hit);
+                bool isGrounded = hasContact && wheel.isGrounded;
+                Vector3 contactPoint = Vector3.zero;
+                Vector3 contactNormal = Vector3.up;
+                float contactForwardSpeed = 0.0f;
+                float contactLateralSpeed = 0.0f;
+                float forwardSlip = 0.0f;
+                float sidewaysSlip = 0.0f;
+
+                if (hasContact)
+                {
+                    contactPoint = hit.point;
+                    contactNormal = hit.normal;
+                    forwardSlip = hit.forwardSlip;
+                    sidewaysSlip = hit.sidewaysSlip;
+
+                    if (m_RigidBody != null)
+                    {
+                        Vector3 contactVelocity = m_RigidBody.GetPointVelocity(hit.point);
+                        contactForwardSpeed = Vector3.Dot(contactVelocity, hit.forwardDir);
+                        contactLateralSpeed = Vector3.Dot(contactVelocity, hit.sidewaysDir);
+                    }
+                }
+
+                EWheelState state = DetermineWheelState(
+                    wheelIndex,
+                    hasContact,
+                    contactForwardSpeed,
+                    forwardSlip,
+                    sidewaysSlip,
+                    wheel != null ? wheel.rpm : 0.0f,
+                    wheel != null ? wheel.motorTorque : 0.0f,
+                    wheel != null ? wheel.brakeTorque : 0.0f);
+                m_WheelStates[wheelIndex] = state;
+                m_WheelSnapshots[wheelIndex] = new WheelSnapshot(
+                    wheelIndex,
+                    wheelIndex < FrontWheelCount,
+                    isGrounded,
+                    hasContact,
+                    contactPoint,
+                    contactNormal,
+                    contactForwardSpeed,
+                    contactLateralSpeed,
+                    forwardSlip,
+                    sidewaysSlip,
+                    wheel != null ? wheel.rpm : 0.0f,
+                    wheel != null ? wheel.motorTorque : 0.0f,
+                    wheel != null ? wheel.brakeTorque : 0.0f,
+                    state,
+                    m_WheelDamageStates[wheelIndex]);
             }
         }
 
@@ -204,6 +343,105 @@ namespace OpenG3.Vehicles
 
             m_WheelVisuals[wheelIndex] = wheelVisual.transform;
             m_WheelVisualRotationOffsets[wheelIndex] = visualRotation;
+        }
+
+        private void ApplyWheelDamageState(int wheelIndex)
+        {
+            WheelCollider wheel = Wheels[wheelIndex];
+            if (wheel == null)
+            {
+                return;
+            }
+
+            EWheelDamageState damageState = m_WheelDamageStates[wheelIndex];
+            if (damageState == EWheelDamageState.Missing)
+            {
+                wheel.motorTorque = 0.0f;
+                wheel.brakeTorque = 0.0f;
+                wheel.enabled = false;
+                return;
+            }
+
+            wheel.enabled = true;
+            float tractionMultiplier = GetTractionMultiplier(
+                damageState,
+                VehicleManager.VehicleData.WheelBurstTractionMultiplier);
+
+            WheelFrictionCurve forwardFriction = m_BaseForwardFriction[wheelIndex];
+            forwardFriction.stiffness *= tractionMultiplier;
+            wheel.forwardFriction = forwardFriction;
+
+            WheelFrictionCurve sidewaysFriction = m_BaseSidewaysFriction[wheelIndex];
+            sidewaysFriction.stiffness *= tractionMultiplier;
+            wheel.sidewaysFriction = sidewaysFriction;
+        }
+
+        internal static float GetTractionMultiplier(
+            EWheelDamageState damageState,
+            float configuredBurstMultiplier)
+        {
+            return damageState == EWheelDamageState.Burst
+                ? Mathf.Clamp01(configuredBurstMultiplier)
+                : 1.0f;
+        }
+
+        internal static bool IsValidDamageState(EWheelDamageState damageState)
+        {
+            return damageState == EWheelDamageState.Intact ||
+                damageState == EWheelDamageState.Burst ||
+                damageState == EWheelDamageState.Missing;
+        }
+
+        private EWheelState DetermineWheelState(
+            int wheelIndex,
+            bool hasContact,
+            float contactForwardSpeed,
+            float forwardSlip,
+            float sidewaysSlip,
+            float rpm,
+            float motorTorque,
+            float brakeTorque)
+        {
+            if (m_WheelDamageStates[wheelIndex] == EWheelDamageState.Missing)
+            {
+                return EWheelState.Normal;
+            }
+
+            return WheelStateClassifier.Classify(
+                m_WheelStates[wheelIndex],
+                hasContact,
+                m_DrivenWheels[wheelIndex],
+                contactForwardSpeed,
+                forwardSlip,
+                sidewaysSlip,
+                rpm,
+                motorTorque,
+                brakeTorque,
+                VehicleManager.VehicleData.WheelStateSlipEnterThreshold,
+                VehicleManager.VehicleData.WheelStateSlipExitThreshold,
+                VehicleManager.VehicleData.WheelSpinContactSpeedThreshold,
+                VehicleManager.VehicleData.WheelLockContactSpeedThreshold,
+                VehicleManager.VehicleData.WheelLockRpmThreshold);
+        }
+
+        private static WheelSnapshot CreateEmptySnapshot(int wheelIndex, bool isFrontWheel)
+        {
+            return new WheelSnapshot(
+                wheelIndex,
+                isFrontWheel,
+                false,
+                false,
+                Vector3.zero,
+                Vector3.up,
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
+                EWheelState.Normal,
+                EWheelDamageState.Intact);
         }
 
         private static Transform FindChildByName(Transform root, string targetName)

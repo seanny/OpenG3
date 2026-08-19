@@ -9,6 +9,12 @@ namespace GTA3Unity.Core
         private static readonly Quaternion s_ModelBasisRotation = Quaternion.Euler(-90.0f, 180.0f, 0.0f);
         public int ModelIndex;
         protected GameObject m_PedModel;
+        [SerializeField] protected float m_Health;
+
+        public virtual void DamageHealth(float damage)
+        {
+            m_Health -= damage;
+        }
 
         public virtual void SetModel(int modelIndex)
         {
