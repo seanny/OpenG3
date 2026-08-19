@@ -153,6 +153,22 @@ namespace OpenG3.Vehicles
             }
         }
 
+        public void SetColour(int col1, int col2)
+        {
+            VehicleColourDefinition colour1 = VehicleColours.GetWhite();
+            VehicleColourDefinition colour2 = VehicleColours.GetWhite();
+            if(VehicleColours.Colours.ContainsKey(col1))
+            {
+                colour1 = VehicleColours.Colours[col1];
+            }
+            if(VehicleColours.Colours.ContainsKey(col2))
+            {
+                colour2 = VehicleColours.Colours[col2];
+            }
+
+            // TODO: Assign colours to vehicle materials
+        }
+
         public void SetVehicleType(EVehicleType vehicleType)
         {
             m_VehicleType = vehicleType;

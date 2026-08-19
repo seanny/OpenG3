@@ -301,6 +301,7 @@ namespace GTA3Unity
             Debug.Log("FileLoader.Init begin");
             LoadImages();
             m_TxdMaterialCache.SetImageFile(m_MainImg, m_FallbackMaterial);
+            VehicleColours.Init(Path.Combine(GameManager.Instance.GtaDirectory, "data", "carcols.dat"));
             // TODO: Load GXT
             // TODO: Load Audio
             // TODO: Load Audio
