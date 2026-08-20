@@ -1,0 +1,27 @@
+;
+; Title     :   vehicle_settings.dat
+; Purpose   :   Global runtime vehicle tuning constants
+; Author    :   Sean McElholm
+; Date      :   27/07/2026
+;
+ReverseGear -1
+ReverseSpeedRatio 0.2
+ShiftDownFraction 0.42
+StopSpeed 0.1
+InputDeadZone 0.001
+HandbrakeTorque 20000.0
+LowerGearSpeedMultiplier 4.0
+BrakeForceMultiplier 4.0
+WheelGripMultiplier 2.5
+WheelStateSlipEnterThreshold 0.6
+WheelStateSlipExitThreshold 0.3
+WheelSpinContactSpeedThreshold 0.2
+WheelLockContactSpeedThreshold 0.005
+WheelLockRpmThreshold 1.0
+WheelBurstTractionMultiplier 0.75
+GameSpeedToMetersPerSecond 50.0
+VehicleShaderBurntMax 0.1
+VehicleBlowUpUpwardForce 10000
+DoorOpenSpeed 90.0
+DamageOnFire 50.0
+DamageWhenFlipped 100.0

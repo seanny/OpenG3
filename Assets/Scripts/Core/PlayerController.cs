@@ -4,6 +4,10 @@ using UnityEngine.InputSystem;
 #endif
 using StarterAssets;
 using System.Collections;
+using OpenG3.Vehicles;
+using System;
+using Unity.VisualScripting;
+using OpenG3.Core;
 
 /* Note: animations are called via the controller for both the character and capsule using animator null checks
  */
@@ -14,7 +18,7 @@ namespace GTA3Unity.Core
 #if ENABLE_INPUT_SYSTEM 
     [RequireComponent(typeof(PlayerInput))]
 #endif
-    public class PlayerController : GtaObject
+    public class PlayerController : PedObject
     {
         public static PlayerController Instance { get; private set; }
 
@@ -114,6 +118,9 @@ namespace GTA3Unity.Core
         private StarterAssetsInputs _input;
         private GameObject _mainCamera;
 
+        private Vehicle m_Vehicle;
+
+        [Header("Animations")]
         private const float _threshold = 0.01f;
         private const float AnimationFadeLength = 0.15f;
         private const string IdleAnimation = "idle_stance";
@@ -134,11 +141,36 @@ namespace GTA3Unity.Core
             }
         }
 
+        public void PutInCar(Vehicle vehicle)
+        {
+            if (vehicle == null || !vehicle.TrySetControlState(EVehicleControlState.PlayerControlled))
+            {
+                return;
+            }
+
+            m_Vehicle = vehicle;
+            SetPedState(EPedState.Driving);
+            PlayPlayerAnimation(vehicle.GetDriverAnimationName());
+            TeleportPlayer(vehicle.transform.position);
+            vehicle.SetDriver(this);
+        }
+
+        public void ExitCar()
+        {
+            Vehicle vehicle = m_Vehicle;
+            SetPedState(EPedState.OnFoot);
+            vehicle.ClearDriver();
+            vehicle.TrySetControlState(EVehicleControlState.None);
+            vehicle.TrySetLifecycleState(EVehicleLifecycleState.Abandoned);
+            TeleportPlayer(vehicle.transform.position + vehicle.transform.up * 2); // TP up for now, in future we want to TP to car door
+            m_Vehicle = null;
+        }
+
         public void TeleportPlayer(Vector3 position, Quaternion? rotation = null)
         {
             _controller.enabled = false;
             transform.position = position;
-            if(rotation != null)
+            if (rotation != null)
             {
                 transform.rotation = (Quaternion)rotation;
             }
@@ -148,7 +180,7 @@ namespace GTA3Unity.Core
 
         private void Awake()
         {
-            if(Instance == null)
+            if (Instance == null)
             {
                 Instance = this;
             }
@@ -161,13 +193,14 @@ namespace GTA3Unity.Core
 
         private IEnumerator Start()
         {
-            while(FileLoader.Instance == null || !FileLoader.Instance.IsDone)
+            while (FileLoader.Instance == null || !FileLoader.Instance.IsDone)
             {
                 yield return null;
             }
 
             SetModel(1);
             Debug.Assert(m_PedModel != null);
+            FileLoader.Instance.PlayPedAnimation(m_PedModel);
             _cinemachineTargetYaw = CinemachineCameraTarget.transform.rotation.eulerAngles.y;
 
             _controller = GetComponent<CharacterController>();
@@ -198,24 +231,128 @@ namespace GTA3Unity.Core
 
         private void Update()
         {
-            if(!GameManager.Instance.InGame)
+            if (!GameManager.Instance.InGame)
             {
                 return;
             }
 
-            // if(!FileLoader.Instance.MapLoaded)
-            // {
-            //     return;
-            // }
+            switch (m_PedState)
+            {
+                case EPedState.OnFoot:
+                    FindVehicles();
+                    JumpAndGravity();
+                    GroundedCheck();
+                    Move();
+                    UpdateExplosionImpact();
+                    UpdateGetup();
+                    break;
+                case EPedState.Driving:
+                    if (m_Vehicle == null)
+                    {
+                        return;
+                    }
+                    // TODO: Need to replace these legacy Input calls with new InputSystem instead
+                    TryExitVehicle();
+                    UpdateVehicleAnimation();
+                    m_Vehicle.OnInput(_input);
+                    break;
+                case EPedState.Passenger:
+                    break;
+            }
 
-            JumpAndGravity();
-            GroundedCheck();
-            Move();
+        }
+
+        private void TryExitVehicle()
+        {
+            // super unimportant but nice to have: When holding F, also turn off the engine similar to GTA V
+            if (Input.GetKeyUp(KeyCode.F))
+            {
+                ExitCar();
+            }
+        }
+
+        protected override void UpdateExplosionImpact()
+        {
+            if (m_ExplosionImpactTime <= 0f)
+            {
+                return;
+            }
+            _controller.enabled = false;
+            PlayAnimation(m_ExplosionFallAnimation);
+            m_ExplosionImpactTime -= Time.deltaTime;
+            if (m_ExplosionImpactTime <= 0f)
+            {
+                GetUp();
+            }
+        }
+
+        protected override bool UpdateGetup()
+        {
+            if(base.UpdateGetup() == false)
+            {
+                return false;
+            }
+            if (m_GettingUpTime <= 0f)
+            {
+                _controller.enabled = true;
+            }
+            return true;
+        }
+
+        private void UpdateVehicleAnimation()
+        {
+            if (m_Vehicle == null)
+            {
+                return;
+            }
+
+            PlayPlayerAnimation(m_Vehicle.GetDriverAnimationName());
+        }
+
+        private void FindVehicles()
+        {
+            if (Input.GetKeyUp(KeyCode.Alpha0))
+            {
+                // Temp debug spawn random vehicle
+                EVehicleClass vehicleClass = (EVehicleClass)UnityEngine.Random.Range(0, (int)EVehicleClass.TotalVehicleClasses);
+                VehicleSpawning.SpawnRandomVehicle(vehicleClass, transform.position);
+            }
+            if (Input.GetKeyUp(KeyCode.Alpha1))
+            {
+                VfxManager.Instance.SpawnFire(transform.position);
+            }
+            if (Input.GetKeyUp(KeyCode.Alpha2))
+            {
+                VfxManager.Instance.SpawnSmoke(transform.position);
+            }
+            if (Input.GetKeyUp(KeyCode.F))
+            {
+                Vehicle[] vehs = GameObject.FindObjectsByType<Vehicle>();
+                if (vehs.Length < 1)
+                {
+                    return;
+                }
+                float nearestDistance = 20f;
+                Vehicle nearestVehicle = null;
+                foreach (var vehicle in vehs)
+                {
+                    float distance = Vector3.Distance(transform.position, vehicle.transform.position);
+                    if (distance < nearestDistance)
+                    {
+                        nearestDistance = distance;
+                        nearestVehicle = vehicle;
+                    }
+                }
+                if (nearestVehicle != null)
+                {
+                    PutInCar(nearestVehicle);
+                }
+            }
         }
 
         private void LateUpdate()
         {
-            if(!GameManager.Instance.InGame)
+            if (!GameManager.Instance.InGame)
             {
                 return;
             }
@@ -264,6 +401,16 @@ namespace GTA3Unity.Core
 
         private void Move()
         {
+            if (m_PedState != EPedState.OnFoot)
+            {
+                return;
+            }
+
+            if (m_ExplosionImpactTime > 0f || m_GettingUpTime > 0f)
+            {
+                return;
+            }
+
             // set target speed based on move speed, sprint speed and if sprint is pressed
             float targetSpeed = _input.sprint ? SprintSpeed : MoveSpeed;
 
@@ -329,6 +476,16 @@ namespace GTA3Unity.Core
 
         private void JumpAndGravity()
         {
+            if (m_PedState != EPedState.OnFoot)
+            {
+                return;
+            }
+
+            if (m_ExplosionImpactTime > 0f || m_GettingUpTime > 0f)
+            {
+                return;
+            }
+
             if (Grounded)
             {
                 // reset the fall timeout timer
@@ -381,6 +538,11 @@ namespace GTA3Unity.Core
 
         private void UpdateMovementAnimation(bool hasMoveInput, float targetSpeed)
         {
+            if (m_PedState != EPedState.OnFoot)
+            {
+                return;
+            }
+
             if (!Grounded)
             {
                 PlayPlayerAnimation(FallAnimation);
@@ -402,7 +564,7 @@ namespace GTA3Unity.Core
             PlayPlayerAnimation(targetSpeed <= MoveSpeed ? WalkAnimation : RunAnimation);
         }
 
-        private void PlayPlayerAnimation(string animationName)
+        private void PlayPlayerAnimation(string animationName, WrapMode wrapMode = WrapMode.Loop)
         {
             if (_currentAnimation == animationName)
             {
@@ -412,7 +574,7 @@ namespace GTA3Unity.Core
             if (base.PlayAnimation(
                 animationName,
                 AnimationFadeLength,
-                WrapMode.Loop,
+                wrapMode,
                 IsLocomotionAnimation(animationName)))
             {
                 _currentAnimation = animationName;

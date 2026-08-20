@@ -1,35 +1,22 @@
+using OpenG3.Vehicles;
 using UnityEngine;
 
 namespace GTA3Unity.Core
 {
     public class GtaObject : MonoBehaviour
     {
-        private static readonly Vector3 s_ModelBasisPosition = new Vector3(0, 1.0f, 0.0f);
+        protected static readonly Vector3 s_ModelBasisPosition = new Vector3(0, 1.0f, 0.0f);
         private static readonly Quaternion s_ModelBasisRotation = Quaternion.Euler(-90.0f, 180.0f, 0.0f);
-
+        public int ModelIndex;
         protected GameObject m_PedModel;
+        [SerializeField] protected float m_Health;
 
-        public bool PlayAnimation(
-            string animName,
-            float fadeLength = 0.15f,
-            WrapMode wrapMode = WrapMode.Loop,
-            bool makeInPlace = false)
+        public virtual void DamageHealth(float damage)
         {
-            if(m_PedModel == null)
-            {
-                Debug.LogError($"Ped {name} does not have a PedModel attached.");
-                return false;
-            }
-
-            return FileLoader.Instance.PlayPedAnimation(
-                m_PedModel,
-                animName,
-                fadeLength,
-                wrapMode,
-                makeInPlace);
+            m_Health -= damage;
         }
 
-        public void SetModel(int modelIndex)
+        public virtual void SetModel(int modelIndex)
         {
             if(FileLoader.Instance == null || !FileLoader.Instance.IsDone)
             {
@@ -41,22 +28,28 @@ namespace GTA3Unity.Core
                 Destroy(m_PedModel);
             }
 
+            m_PedModel = InstantiateModel(modelIndex);
+            ModelIndex = modelIndex;
+        }
+
+        protected virtual GameObject InstantiateModel(int modelIndex)
+        {
             GameObject template = FileLoader.Instance.GetModel(modelIndex);
 
             if (template == null)
             {
-                Debug.LogWarning($"Could not load ped model {modelIndex}.");
-                return;
+                Debug.LogWarning($"Could not load model {modelIndex}.");
+                return null;
             }
 
-            m_PedModel = GameObject.Instantiate<GameObject>(template);
-            m_PedModel.name = template.name.Replace("_Template", string.Empty);
-            m_PedModel.transform.SetParent(transform, worldPositionStays: false);
-            m_PedModel.transform.localPosition = s_ModelBasisPosition;
-            m_PedModel.transform.localRotation = s_ModelBasisRotation;
-            m_PedModel.transform.localScale = Vector3.one;
-            m_PedModel.SetActive(true);
-            FileLoader.Instance.PlayPedAnimation(m_PedModel);
+            var spawnedModel = GameObject.Instantiate<GameObject>(template);
+            spawnedModel.name = template.name.Replace("_Template", string.Empty);
+            spawnedModel.transform.SetParent(transform, worldPositionStays: false);
+            spawnedModel.transform.localPosition = s_ModelBasisPosition;
+            spawnedModel.transform.localRotation = s_ModelBasisRotation;
+            spawnedModel.transform.localScale = Vector3.one;
+            spawnedModel.SetActive(true);
+            return spawnedModel;
         }
     }
 }

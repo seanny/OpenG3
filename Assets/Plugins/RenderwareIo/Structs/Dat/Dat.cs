@@ -10,6 +10,7 @@ namespace RenderWareIo.Structs.Dat
     {
         public List<string> Ipls;
         public List<string> Ides;
+        public List<string> ModelFiles;
         // public List<GunWeapon> Guns;
         // public List<MeleeWeapon> MeleeWeapons;
 
@@ -36,6 +37,9 @@ namespace RenderWareIo.Structs.Dat
                 case "IDE":
                     this.Ides.Add(splits[1]);
                     break;
+                case "MODELFILE":
+                    this.ModelFiles.Add(splits[1]);
+                    break;
                 // case "�":
                 //     this.MeleeWeapons.Add(new MeleeWeapon().Read(line));
                 //     break;
@@ -49,6 +53,7 @@ namespace RenderWareIo.Structs.Dat
         {
             this.Ipls = new List<string>();
             this.Ides = new List<string>();
+            this.ModelFiles = new List<string>();
             // this.Guns = new List<GunWeapon>();
             // this.MeleeWeapons = new List<MeleeWeapon>();
 

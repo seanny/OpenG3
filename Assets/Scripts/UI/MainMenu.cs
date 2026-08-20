@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using GTA3Unity.Core;
 using System.Collections;
+using UnityEngine.SceneManagement;
+using System;
 
 namespace GTA3Unity.UI
 {
@@ -86,6 +88,23 @@ namespace GTA3Unity.UI
         public void OnClickStartButton()
         {
             SetMenuState(EMainMenuState.StartGame);
+        }
+
+        public void OnStartDebugGame()
+        {
+            m_StartGame.gameObject.SetActive(false);
+
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+            FileLoader.Instance.StopWorldLoading();
+            var asyncOp = SceneManager.LoadSceneAsync("TestScene", LoadSceneMode.Additive);
+            asyncOp.completed += OnDebugMapLoaded;
+        }
+
+        private void OnDebugMapLoaded(AsyncOperation operation)
+        {
+            OnMapLoaded();
+            PlayerController.Instance.TeleportPlayer(new Vector3(910.777771f, 101, -409.139709f));
         }
 
         public void OnClickStartNewGame()

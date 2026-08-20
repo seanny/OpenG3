@@ -26,7 +26,8 @@ namespace GTA3Unity
         {
             string dffName = $"{meshObj.ModelName}.dff";
 
-            if (!imgFileToReadFrom.Contains(dffName))
+            if (!imgFileToReadFrom.Contains(dffName) &&
+                !FileLoader.Instance.TryGetLooseDff(dffName, out _))
             {
                 Debug.LogWarning($"Could not find DFF '{meshObj.ModelName}'.");
                 s_SpawnFailures++;
@@ -112,15 +113,20 @@ namespace GTA3Unity
 
             string dffName = $"{meshObj.ModelName}.dff";
 
-            if (!imgFileToReadFrom.Contains(dffName))
-            {
-                Debug.LogWarning($"Could not find DFF '{dffName}'.");
-                s_SpawnFailures++;
-                return null;
-            }
+            DffFile dffFile = null;
 
-            GTA3Unity.Img.FileEntry entry = imgFileToReadFrom[dffName];
-            DffFile dffFile = new DffFile(entry.GetData());
+            if (!FileLoader.Instance.TryGetLooseDff(dffName, out dffFile))
+            {
+                if (!imgFileToReadFrom.Contains(dffName))
+                {
+                    Debug.LogWarning($"Could not find DFF '{dffName}'.");
+                    s_SpawnFailures++;
+                    return null;
+                }
+
+                GTA3Unity.Img.FileEntry entry = imgFileToReadFrom[dffName];
+                dffFile = new DffFile(entry.GetData());
+            }
 
             bool isPedDefinition =
                 meshObj is RenderWareIo.Structs.Ide.Ped;

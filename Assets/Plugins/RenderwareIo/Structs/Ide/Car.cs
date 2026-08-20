@@ -8,7 +8,7 @@ using UnityEngine;
 namespace RenderWareIo.Structs.Ide
 {
     [Serializable]
-    public struct Car : IIdeEntity<Car>
+    public struct Car : IIdeEntity<Car>, IModelTxd
     {
         public int Id;
         public string ModelName;
@@ -24,6 +24,9 @@ namespace RenderWareIo.Structs.Ide
         public int WheelModelId;
         public float WheelScale;
         public int LODModel;
+
+        string IModelTxd.ModelName => ModelName;
+        string IModelTxd.TxdName => TxdName;
 
 
         public Car Read(string line)
@@ -44,7 +47,7 @@ namespace RenderWareIo.Structs.Ide
             this.Class = splits[6];
             this.Frequency = int.Parse(splits[7]);
             this.Level = int.Parse(splits[8]);
-            this.CompRules = Convert.ToUInt32(ReplaceInvalidFileNameCharacters(splits[9], ""), 16);
+            this.CompRules = Convert.ToUInt32(ReplaceInvalidFileNameCharacters(splits[9].Trim(), ""), 16);
             if(Type == "car")
             {
                 this.WheelModelId = int.Parse(splits[10]);

@@ -6,7 +6,7 @@ using UnityEngine.AI;
 
 namespace GTA3Unity.Peds
 {
-    public class Ped: GtaObject
+    public class Ped: PedObject
     {
         public NavMeshAgent NavMeshAgent => m_NavMeshAgent;
 
@@ -49,5 +49,12 @@ namespace GTA3Unity.Peds
             m_StateMachine.OnUpdate(Time.deltaTime);
         }
         #endregion
+
+        public override void SetModel(int modelIndex)
+        {
+            base.SetModel(modelIndex);
+            FileLoader.Instance.PlayPedAnimation(m_PedModel);
+        }
+
     }
 }

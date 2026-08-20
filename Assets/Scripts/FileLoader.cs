@@ -13,6 +13,8 @@ using RenderWareIo.Structs.Ide;
 using RenderWareIo.Structs.Ifp;
 using Unity.AI.Navigation;
 using GTA3Unity.UI;
+using OpenG3.Vehicles;
+using OpenG3.Core;
 
 namespace GTA3Unity
 {
@@ -26,6 +28,31 @@ namespace GTA3Unity
         public bool MapLoaded => m_MapLoaded;
         public int SpawnedCount => m_SpawnedCount;
         public int CountToLoad => m_CountToLoad;
+        public IReadOnlyDictionary<string, DffFile> LooseDffFiles => m_LooseDff;
+
+        public bool TryGetLooseDff(string dffName, out DffFile dffFile)
+        {
+            if (m_LooseDff.TryGetValue(dffName, out dffFile))
+            {
+                return true;
+            }
+
+            HashSet<DffFile> checkedFiles = new();
+            foreach (DffFile looseDff in m_LooseDff.Values)
+            {
+                if (looseDff == null || !checkedFiles.Add(looseDff) ||
+                    !looseDff.TryGetEmbeddedDff(dffName, out dffFile))
+                {
+                    continue;
+                }
+
+                m_LooseDff[dffName] = dffFile;
+                return true;
+            }
+
+            dffFile = null;
+            return false;
+        }
 
         public Action OnMapLoaded;
 
@@ -42,11 +69,14 @@ namespace GTA3Unity
         [SerializeField]
         private List<RenderWareIo.Structs.Ide.Ped> m_Peds = new();
         [SerializeField] private List<IplFile> m_IplFiles = new();
+        [SerializeField] private List<DffFile> m_DffFiles = new();
 
         private Dictionary<int, GameObject> m_LoadedModels = new();
         private List<GameObject> m_IplRootObjects = new();
 
         private ImgFile m_MainImg;
+        private Dictionary<string, DffFile> m_LooseDff =
+            new(StringComparer.OrdinalIgnoreCase);
         private Material m_FallbackMaterial;
         private TxdMaterialCache m_TxdMaterialCache;
         private IfpFile m_PedIfpFile;
@@ -73,6 +103,18 @@ namespace GTA3Unity
             }
 
             // Load model into memory for use
+            foreach(var car in m_Cars)
+            {
+                if(car.Id == modelIndex)
+                {
+                    return MeshSpawn.GetOrCreateTemplate<RenderWareIo.Structs.Ide.Car>(
+                        modelIndex,
+                        car,
+                        m_MainImg,
+                        m_FallbackMaterial,
+                        m_TxdMaterialCache);
+                }
+            }
             foreach(var ideObject in m_Peds)
             {
                 if(ideObject.Id == modelIndex)
@@ -80,7 +122,35 @@ namespace GTA3Unity
                     return MeshSpawn.GetOrCreateTemplate<Ped>(modelIndex, ideObject, m_MainImg, m_FallbackMaterial, m_TxdMaterialCache);
                 }
             }
+            foreach(var ideObject in m_Objects)
+            {
+                if(ideObject.Id == modelIndex)
+                {
+                    return MeshSpawn.GetOrCreateTemplate<Obj>(modelIndex, ideObject, m_MainImg, m_FallbackMaterial, m_TxdMaterialCache);
+                }
+            }
             return null;
+        }
+
+        public bool TryGetCarDefinition(
+            string handlingIdentifier,
+            out RenderWareIo.Structs.Ide.Car car)
+        {
+            for(int i = 0; i < m_Cars.Count; i++)
+            {
+                RenderWareIo.Structs.Ide.Car candidate = m_Cars[i];
+                if(string.Equals(
+                    candidate.HandlingId,
+                    handlingIdentifier,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    car = candidate;
+                    return true;
+                }
+            }
+
+            car = default;
+            return false;
         }
 
         public bool TryGetRandomPedModelIndex(out int modelIndex)
@@ -189,18 +259,24 @@ namespace GTA3Unity
         {
             Debug.Assert(m_TxdMaterialCache != null);
 
+            if(m_TxdMaterialCache.Textures.ContainsKey($"{txdFile}/{textureName}"))
+            {
+                return m_TxdMaterialCache.Textures[$"{txdFile}/{textureName}"];;
+            }
+
             // Frontend textures
-            m_TxdMaterialCache.LoadTexture(txdFile, textureName, out string _);
-            return m_TxdMaterialCache.Textures[$"{txdFile}/{textureName}"];
+            return m_TxdMaterialCache.LoadTexture(txdFile, textureName, out string _);
         }
 
         public void PreInit()
         {
-            LoadImages();
+            var timer = System.Diagnostics.Stopwatch.StartNew();
             LoadMaterials();
             InitTxdCache();
             RegisterEarlyTxds();
             m_PreInitIsDone = true;
+            timer.Stop();
+            Debug.Log($"PreInit took {timer.Elapsed.Milliseconds}ms");
         }
 
         public void Init()
@@ -210,6 +286,7 @@ namespace GTA3Unity
 
         public IEnumerator OnInit()
         {
+            var timer = System.Diagnostics.Stopwatch.StartNew();
             while(m_PreInitIsDone == false)
             {
                 yield return null;
@@ -222,6 +299,9 @@ namespace GTA3Unity
 
             m_IsDone = true; // To prevent multiple loading of this class
             Debug.Log("FileLoader.Init begin");
+            LoadImages();
+            m_TxdMaterialCache.SetImageFile(m_MainImg, m_FallbackMaterial);
+            VehicleColours.Init(Path.Combine(GameManager.Instance.GtaDirectory, "data", "carcols.dat"));
             // TODO: Load GXT
             // TODO: Load Audio
             // TODO: Load Audio
@@ -229,10 +309,13 @@ namespace GTA3Unity
             // TODO: Load Audio
             // TODO: Load data/pedstats.dat
             // TODO: Load data/timecyc.dat
+            HandlingManager.LoadHandlingData(Path.Combine(GameManager.Instance.GtaDirectory, "data", "handling.cfg"));
             LoadPedAnimations();
             MeshSpawn.ClearCache();
             LoadDataFiles();
+            ExplosionManager.Init();
             m_IsActuallyInit = true;
+            Debug.Log($"OnInit took {timer.Elapsed.Milliseconds}ms");
         }
 
         private void LoadMaterials()
@@ -244,6 +327,7 @@ namespace GTA3Unity
         {
             // This is hardcoded for now as there only ever is the 1 gta3.img file
             m_MainImg = new ImgFile(Path.Combine(GameManager.Instance.GtaDirectory, "models", "gta3.img"));
+            //
         }
 
         private void RegisterEarlyTxds()
@@ -251,13 +335,13 @@ namespace GTA3Unity
             m_TxdMaterialCache.RegisterLooseTxdDirectory(Path.Combine(GameManager.Instance.GtaDirectory, "models"));
             m_TxdMaterialCache.RegisterTxdFile("generic", Path.Combine(GameManager.Instance.GtaDirectory, "models", "generic.txd"));
             m_TxdMaterialCache.RegisterTxdFile("menu", Path.Combine(GameManager.Instance.GtaDirectory, "models", "menu.txd"));
+            m_TxdMaterialCache.RegisterTxdFile("particle", Path.Combine(GameManager.Instance.GtaDirectory, "models", "particle.txd"));
         }
 
         private void InitTxdCache()
         {
             m_TxdMaterialCache = new TxdMaterialCache();
             m_TxdMaterialCache.RegisterLooseTxdDirectory(Path.Combine(GameManager.Instance.GtaDirectory, "txd"));
-            m_TxdMaterialCache.SetImageFile(m_MainImg, m_FallbackMaterial);
         }
 
         private void LoadDataFiles()
@@ -270,26 +354,42 @@ namespace GTA3Unity
             {
                 foreach (string ide in dat.Dat.Ides)
                 {
-                    string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ide));
+                    string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ide.Trim()));
                     IdeFile ideFile = new(path);
                     m_Objects.AddRange(ideFile.Ide.Objs);
+                    m_Cars.AddRange(ideFile.Ide.Cars);
                     m_TxdMaterialCache.RegisterTxdParents(ideFile.Ide.Txdps);
                     m_Peds.AddRange(ideFile.Ide.Peds);
                 }
                 foreach (string ipl in dat.Dat.Ipls)
                 {
-                    string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ipl));
+                    string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ipl.Trim()));
                     IplFile iplFile = new(path);
                     m_IplFiles.Add(iplFile);
                     m_IplRootObjects.Add(new GameObject(iplFile.IplName));
                     m_CountToLoad += iplFile.Ipl.Insts.Count;
                 }
+                foreach (string modelFile in dat.Dat.ModelFiles)
+                {
+                    string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(modelFile.Trim()));
+                    DffFile dffFile = new(path);
+                    m_LooseDff.Add(Path.GetFileName(path),dffFile);
+                }
+            }
+            foreach(var car in m_Cars)
+            {
+                VehicleSpawning.AddVehicle(car);
             }
         }
 
         public void LoadWorldMap()
         {
             StartCoroutine(OnLoadWorldMap());
+        }
+
+        public void StopWorldLoading()
+        {
+            StopAllCoroutines();
         }
 
         public IEnumerator OnLoadWorldMap()

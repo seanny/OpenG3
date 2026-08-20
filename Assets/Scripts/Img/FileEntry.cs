@@ -30,7 +30,15 @@ namespace GTA3Unity.Img
             Size = (int)new FileInfo(filePath).Length;
             FilePath = filePath;
             FileName = Path.GetFileName(FilePath);
-            m_Reader = new BufferReader(new FileStream(FilePath, FileMode.Open));
+            // FileEntry only reads the archive. Allow other readers to open it too;
+            // the FileStream(path, FileMode.Open) overload requests an exclusive
+            // handle, which causes a sharing violation when the archive is loaded
+            // more than once or is already open for reading elsewhere.
+            m_Reader = new BufferReader(new FileStream(
+                FilePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read));
             s_Dependents[m_Reader] = 1;
         }
 
