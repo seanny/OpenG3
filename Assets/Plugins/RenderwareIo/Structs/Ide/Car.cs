@@ -47,7 +47,7 @@ namespace RenderWareIo.Structs.Ide
             this.Class = splits[6];
             this.Frequency = int.Parse(splits[7]);
             this.Level = int.Parse(splits[8]);
-            this.CompRules = Convert.ToUInt32(ReplaceInvalidFileNameCharacters(splits[9], ""), 16);
+            this.CompRules = Convert.ToUInt32(ReplaceInvalidFileNameCharacters(splits[9].Trim(), ""), 16);
             if(Type == "car")
             {
                 this.WheelModelId = int.Parse(splits[10]);

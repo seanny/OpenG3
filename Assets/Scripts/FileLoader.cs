@@ -354,7 +354,7 @@ namespace GTA3Unity
             {
                 foreach (string ide in dat.Dat.Ides)
                 {
-                    string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ide));
+                    string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ide.Trim()));
                     IdeFile ideFile = new(path);
                     m_Objects.AddRange(ideFile.Ide.Objs);
                     m_Cars.AddRange(ideFile.Ide.Cars);
@@ -363,7 +363,7 @@ namespace GTA3Unity
                 }
                 foreach (string ipl in dat.Dat.Ipls)
                 {
-                    string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ipl));
+                    string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ipl.Trim()));
                     IplFile iplFile = new(path);
                     m_IplFiles.Add(iplFile);
                     m_IplRootObjects.Add(new GameObject(iplFile.IplName));
@@ -371,7 +371,7 @@ namespace GTA3Unity
                 }
                 foreach (string modelFile in dat.Dat.ModelFiles)
                 {
-                    string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(modelFile));
+                    string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(modelFile.Trim()));
                     DffFile dffFile = new(path);
                     m_LooseDff.Add(Path.GetFileName(path),dffFile);
                 }
